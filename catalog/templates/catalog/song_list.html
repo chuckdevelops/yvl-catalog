@@ -1,0 +1,146 @@
+{% extends 'catalog/base.html' %}
+
+{% block title %}All Songs | Playboi Carti Catalog{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Songs Catalog</h1>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5>Filters</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" action="{% url 'catalog:song_list' %}" class="row g-3">
+            <div class="col-md-4">
+                <label for="era" class="form-label">Era</label>
+                <select name="era" id="era" class="form-select">
+                    <option value="">All Eras</option>
+                    {% for era in eras %}
+                        {% if era %}
+                            <option value="{{ era }}" {% if era_filter == era %}selected{% endif %}>
+                                {{ era }}
+                            </option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="quality" class="form-label">Quality</label>
+                <select name="quality" id="quality" class="form-select">
+                    <option value="">All Qualities</option>
+                    {% for quality in qualities %}
+                        {% if quality %}
+                            <option value="{{ quality }}" {% if quality_filter == quality %}selected{% endif %}>
+                                {{ quality }}
+                            </option>
+                        {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="q" class="form-label">Search</label>
+                <input type="text" name="q" id="q" class="form-control" placeholder="Search..." value="{{ query }}">
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Apply Filters</button>
+                {% if era_filter or quality_filter or query %}
+                    <a href="{% url 'catalog:song_list' %}" class="btn btn-secondary">Clear Filters</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Results</h5>
+        <span class="badge bg-primary">{{ page_obj.paginator.count }} songs found</span>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Name</th>
+                        <th>Era</th>
+                        <th>Type</th>
+                        <th>Quality</th>
+                        <th>Leak Date</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for song in page_obj %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'catalog:song_detail' song_id=song.id %}">{{ song.name }}</a>
+                            </td>
+                            <td>{% if song.era %}{{ song.era }}{% else %}<em>Unknown</em>{% endif %}</td>
+                            <td>{{ song.type }}</td>
+                            <td>{{ song.quality }}</td>
+                            <td>{{ song.leak_date }}</td>
+                            <td>
+                                {% if song.notes %}
+                                    <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#noteModal{{ song.id }}">
+                                        View Notes
+                                    </button>
+                                    
+                                    <!-- Modal for Notes -->
+                                    <div class="modal fade" id="noteModal{{ song.id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">{{ song.name }} - Notes</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    {{ song.notes|linebreaks }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <em>No notes</em>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">No songs match your filters.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.paginator.num_pages > 1 %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}">Previous</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item disabled">
+                        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends 'catalog/base.html' %}
+
+{% block title %}{{ song.name }} | Playboi Carti Catalog{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'catalog:index' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'catalog:song_list' %}">Songs</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ song.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h1 class="h3 mb-0">{{ song.name }}</h1>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <table class="table">
+                        <tr>
+                            <th style="width: 150px;">Era:</th>
+                            <td>{{ song.era }}</td>
+                        </tr>
+                        <tr>
+                            <th>Type:</th>
+                            <td>{{ song.type }}</td>
+                        </tr>
+                        <tr>
+                            <th>Quality:</th>
+                            <td>{{ song.quality }}</td>
+                        </tr>
+                        <tr>
+                            <th>Track Length:</th>
+                            <td>{{ song.track_length }}</td>
+                        </tr>
+                        <tr>
+                            <th>Leak Date:</th>
+                            <td>{{ song.leak_date }}</td>
+                        </tr>
+                        <tr>
+                            <th>File Date:</th>
+                            <td>{{ song.file_date }}</td>
+                        </tr>
+                        <tr>
+                            <th>Available Length:</th>
+                            <td>{{ song.available_length }}</td>
+                        </tr>
+                    </table>
+
+                    {% if song.links %}
+                    <div class="mt-4">
+                        <h4>Links</h4>
+                        <p>{{ song.links|urlize }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if song.notes %}
+                    <div class="mt-4">
+                        <h4>Notes</h4>
+                        <div class="card">
+                            <div class="card-body bg-light">
+                                {{ song.notes|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Similar Songs</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group">
+                                {% for related in related_songs %}
+                                <a href="{% url 'catalog:song_detail' song_id=related.id %}" class="list-group-item list-group-item-action">
+                                    {{ related.name }}
+                                </a>
+                                {% empty %}
+                                <p class="text-muted">No related songs found.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

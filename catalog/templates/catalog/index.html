@@ -1,0 +1,78 @@
+{% extends 'catalog/base.html' %}
+
+{% block title %}Playboi Carti Music Catalog{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="jumbotron bg-light p-5 rounded">
+            <h1 class="display-4">Playboi Carti Music Catalog</h1>
+            <p class="lead">Your comprehensive resource for Playboi Carti's entire discography.</p>
+            <hr class="my-4">
+            <div class="row">
+                <div class="col-sm-6">
+                    <div class="card mb-3">
+                        <div class="card-body text-center">
+                            <h2 class="display-5">{{ song_count }}</h2>
+                            <p class="lead">Total Songs</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="card mb-3">
+                        <div class="card-body text-center">
+                            <h2 class="display-5">{{ era_count }}</h2>
+                            <p class="lead">Distinct Eras</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-3">
+                <a class="btn btn-primary btn-lg" href="{% url 'catalog:song_list' %}" role="button">Browse Catalog</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <h3>Recent Songs</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Name</th>
+                                <th>Era</th>
+                                <th>Type</th>
+                                <th>Quality</th>
+                                <th>Leak Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for song in recent_songs %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'catalog:song_detail' song_id=song.id %}">{{ song.name }}</a>
+                                    </td>
+                                    <td>{% if song.era %}{{ song.era }}{% else %}<em>Unknown</em>{% endif %}</td>
+                                    <td>{{ song.type }}</td>
+                                    <td>{{ song.quality }}</td>
+                                    <td>{{ song.leak_date }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No songs found in the database.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
