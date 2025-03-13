@@ -91,6 +91,11 @@ class Command(BaseCommand):
                 sheet_tab = released_tab
                 reason = "Official release"
             
+            # Check for Streaming category
+            elif "Streaming" in notes:
+                sheet_tab = released_tab
+                reason = "Streaming category"
+            
             # Try to match by emoji first
             elif "🏆" in name:
                 sheet_tab = grails_tab

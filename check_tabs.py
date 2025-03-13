@@ -78,8 +78,9 @@ def check_potential_issues():
     
     # Check for released songs not in Released tab
     released_songs = CartiCatalog.objects.filter(
-        models.Q(type__in=["Single", "Album Track"]) |
-        models.Q(era__in=["Playboi Carti", "Die Lit", "Whole Lotta Red [V4]"])
+        models.Q(type__in=["Single", "Album Track", "Feature"]) |
+        models.Q(era__in=["Playboi Carti", "Die Lit", "Whole Lotta Red [V4]"]) |
+        models.Q(notes__icontains="Streaming")
     ).exclude(
         metadata__sheet_tab__name="Released"
     )
@@ -87,10 +88,23 @@ def check_potential_issues():
     print(f"Found {released_songs.count()} potential Released songs not in the Released tab:")
     for song in released_songs[:20]:  # Show first 20
         current_tab = song.metadata.sheet_tab.name if hasattr(song, 'metadata') and song.metadata and song.metadata.sheet_tab else "No tab"
-        print(f"- {song.name} (Era: {song.era}, Type: {song.type}) is in {current_tab}")
+        streaming = "(Streaming)" if song.notes and "Streaming" in song.notes else ""
+        print(f"- {song.name} (Era: {song.era}, Type: {song.type}) {streaming} is in {current_tab}")
     
     if released_songs.count() > 20:
         print(f"... and {released_songs.count() - 20} more.")
+        
+    # Check specifically for Streaming songs not in Released tab
+    streaming_songs = CartiCatalog.objects.filter(
+        notes__icontains="Streaming"
+    ).exclude(
+        metadata__sheet_tab__name="Released"
+    )
+    
+    print(f"\nFound {streaming_songs.count()} songs with Streaming category not in the Released tab:")
+    for song in streaming_songs[:20]:  # Show first 20
+        current_tab = song.metadata.sheet_tab.name if hasattr(song, 'metadata') and song.metadata and song.metadata.sheet_tab else "No tab"
+        print(f"- {song.name} (Era: {song.era}, Type: {song.type}) is in {current_tab}")
     
     # Check for songs with emojis in wrong tabs
     print("\nSongs with emoji markers in wrong tabs:")
