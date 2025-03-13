@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Count
+from django.db import models
 from .models import CartiCatalog, SheetTab, SongMetadata
 
 def index(request):
@@ -8,13 +9,30 @@ def index(request):
     song_count = CartiCatalog.objects.count()
     era_count = CartiCatalog.objects.values('era').distinct().count()
     sheet_tab_count = SheetTab.objects.count()
-    recent_songs = CartiCatalog.objects.all().order_by('-id')[:10]
+    
+    # Get recent songs with tab information
+    recent_songs = CartiCatalog.objects.select_related('metadata__sheet_tab').all().order_by('-id')[:10]
+    
+    # Add sheet tab info to recent songs
+    for song in recent_songs:
+        try:
+            song.sheet_tab_name = song.metadata.sheet_tab.name if hasattr(song, 'metadata') and song.metadata and song.metadata.sheet_tab else "Unknown"
+            song.subsection_name = song.metadata.subsection if hasattr(song, 'metadata') and song.metadata and song.metadata.subsection else None
+        except (SongMetadata.DoesNotExist, AttributeError):
+            song.sheet_tab_name = "Unknown"
+            song.subsection_name = None
+    
+    # Get popular tabs
+    popular_tabs = SheetTab.objects.annotate(
+        song_count=models.Count('songs')
+    ).order_by('-song_count')[:5]
     
     context = {
         'song_count': song_count,
         'era_count': era_count,
         'sheet_tab_count': sheet_tab_count,
         'recent_songs': recent_songs,
+        'popular_tabs': popular_tabs,
     }
     return render(request, 'catalog/index.html', context)
 
@@ -26,8 +44,8 @@ def song_list(request):
     sheet_tab_id = request.GET.get('sheet_tab', '')
     query = request.GET.get('q', '')
     
-    # Start with all songs
-    songs = CartiCatalog.objects.all()
+    # Start with all songs - use select_related to optimize queries for metadata
+    songs = CartiCatalog.objects.select_related('metadata__sheet_tab').all()
     
     # Apply filters
     if era:
@@ -39,8 +57,20 @@ def song_list(request):
     if query:
         songs = songs.filter(Q(name__icontains=query) | Q(notes__icontains=query))
     
+    # Add sheet tab info to song objects
+    songs_with_tabs = []
+    for song in songs:
+        # Get sheet tab directly from metadata to avoid property lookup issues
+        try:
+            song.sheet_tab_name = song.metadata.sheet_tab.name if song.metadata and song.metadata.sheet_tab else "Unknown"
+            song.subsection_name = song.metadata.subsection if song.metadata and song.metadata.subsection else None
+        except (SongMetadata.DoesNotExist, AttributeError):
+            song.sheet_tab_name = "Unknown"
+            song.subsection_name = None
+        songs_with_tabs.append(song)
+    
     # Pagination
-    paginator = Paginator(songs, 25)  # Show 25 songs per page
+    paginator = Paginator(songs_with_tabs, 25)  # Show 25 songs per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -63,20 +93,22 @@ def song_list(request):
 
 def song_detail(request, song_id):
     """Display detailed information about a specific song"""
-    song = get_object_or_404(CartiCatalog, id=song_id)
+    # Use select_related to optimize query
+    song = get_object_or_404(CartiCatalog.objects.select_related('metadata__sheet_tab'), id=song_id)
     
     # Get songs from the same era for recommendations
     related_songs = CartiCatalog.objects.filter(era=song.era).exclude(id=song.id)[:5]
     
-    # Try to get song metadata
+    # Add explicit attributes for sheet tab and subsection
     try:
-        metadata = SongMetadata.objects.get(song=song)
-    except SongMetadata.DoesNotExist:
-        metadata = None
+        song.sheet_tab_name = song.metadata.sheet_tab.name if hasattr(song, 'metadata') and song.metadata and song.metadata.sheet_tab else "Unknown"
+        song.subsection_name = song.metadata.subsection if hasattr(song, 'metadata') and song.metadata and song.metadata.subsection else None
+    except (SongMetadata.DoesNotExist, AttributeError):
+        song.sheet_tab_name = "Unknown"
+        song.subsection_name = None
     
     context = {
         'song': song,
-        'metadata': metadata,
         'related_songs': related_songs,
     }
     return render(request, 'catalog/song_detail.html', context)

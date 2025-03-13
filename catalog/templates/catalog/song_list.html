@@ -89,8 +89,11 @@
                             </td>
                             <td>{% if song.era %}{{ song.era }}{% else %}<em>Unknown</em>{% endif %}</td>
                             <td>
-                                {% if song.sheet_tab %}
-                                    {{ song.sheet_tab.name }}
+                                {% if song.sheet_tab_name and song.sheet_tab_name != "Unknown" %}
+                                    {{ song.sheet_tab_name }}
+                                    {% if song.subsection_name %}
+                                        <small class="text-muted">({{ song.subsection_name }})</small>
+                                    {% endif %}
                                 {% else %}
                                     <em>Unknown</em>
                                 {% endif %}

@@ -26,8 +26,20 @@
                         </tr>
                         <tr>
                             <th>Sheet Tab:</th>
-                            <td>{% if song.sheet_tab %}{{ song.sheet_tab.name }}{% else %}<em>Unknown</em>{% endif %}</td>
+                            <td>
+                                {% if song.sheet_tab_name and song.sheet_tab_name != "Unknown" %}
+                                    {{ song.sheet_tab_name }}
+                                {% else %}
+                                    <em>Unknown</em>
+                                {% endif %}
+                            </td>
                         </tr>
+                        {% if song.subsection_name %}
+                        <tr>
+                            <th>Subsection:</th>
+                            <td>{{ song.subsection_name }}</td>
+                        </tr>
+                        {% endif %}
                         <tr>
                             <th>Type:</th>
                             <td>{{ song.type }}</td>
