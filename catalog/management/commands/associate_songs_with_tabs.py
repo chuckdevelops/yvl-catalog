@@ -120,6 +120,7 @@ class Command(BaseCommand):
             current_year = "2025"
             previous_year = "2024"
             
+            file_date = song.file_date if song.file_date else ""
             if (
                 (leak_date and (current_year in leak_date or previous_year in leak_date)) or
                 (file_date and (current_year in file_date or previous_year in file_date))
