@@ -494,6 +494,77 @@ def check_status():
         if wrong_emoji > 0:
             print(f"  {emoji} ({tab_name}): {wrong_emoji} songs in wrong tabs")
 
+def clean_unknown_era_entries(auto_confirm=False):
+    """Remove entries that are just formatting dividers from Google Sheets with unknown era
+    
+    Args:
+        auto_confirm: If True, skips confirmation prompt and deletes entries automatically
+    """
+    print("Cleaning up unknown era entries...")
+    
+    # Find songs with null or "Unknown" era
+    unknown_era_songs = CartiCatalog.objects.filter(
+        models.Q(era__isnull=True) | 
+        models.Q(era__exact="") | 
+        models.Q(era__iexact="Unknown")
+    )
+    
+    print(f"Found {unknown_era_songs.count()} songs with unknown era")
+    
+    # Track which ones to delete
+    to_delete = []
+    
+    # Check each song
+    for song in unknown_era_songs:
+        delete_entry = False
+        
+        # Check for formatting patterns like "DONDA [V3]" or "16*29 [V2]" without other data
+        if song.name and (
+            ("[V" in song.name) or 
+            (song.name.startswith("16*29")) or
+            ("DONDA" in song.name) or
+            ("Total Full" in song.name) or
+            ("<td class=" in song.name) or
+            ("dir=\"ltr\"" in song.name) or
+            ("span style=" in song.name) or
+            (song.name.startswith("<"))
+        ):
+            delete_entry = True
+        
+        # Check for empty name with unknown era
+        if not song.name or song.name.strip() == "":
+            delete_entry = True
+            
+        # Add to deletion list
+        if delete_entry:
+            to_delete.append(song.id)
+            print(f"Marking for deletion: ID:{song.id} - '{song.name}'")
+    
+    # Delete or confirm deletion
+    if to_delete:
+        print(f"\nFound {len(to_delete)} entries to delete.")
+        
+        if auto_confirm:
+            # Auto-confirm and delete without prompting
+            CartiCatalog.objects.filter(id__in=to_delete).delete()
+            print(f"Deleted {len(to_delete)} entries automatically.")
+        else:
+            # Ask for confirmation
+            try:
+                confirm = input(f"Delete these {len(to_delete)} entries? (y/n): ")
+                
+                if confirm.lower() == 'y':
+                    # Delete the entries
+                    CartiCatalog.objects.filter(id__in=to_delete).delete()
+                    print(f"Deleted {len(to_delete)} entries.")
+                else:
+                    print("Deletion cancelled.")
+            except (EOFError, KeyboardInterrupt):
+                # Handle EOF or interrupt
+                print("\nInteractive confirmation not available. Use --auto-confirm option.")
+    else:
+        print("No entries found to delete.")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Fix tab assignments in the database')
     parser.add_argument('--released', action='store_true', help='Fix Released/Unreleased tab assignments based on types')
@@ -502,12 +573,15 @@ if __name__ == "__main__":
     parser.add_argument('--reconcile', action='store_true', help='Reconcile all tab assignments based on priority rules')
     parser.add_argument('--misc', action='store_true', help='Fix Misc tab assignments and clear Art tab')
     parser.add_argument('--check', action='store_true', help='Check current tab assignments')
+    parser.add_argument('--clean-unknown', action='store_true', help='Clean up unknown era entries that are formatting dividers')
+    parser.add_argument('--auto-confirm', action='store_true', help='Auto-confirm deletion of entries without prompting')
     parser.add_argument('--fix-all', action='store_true', help='Run all fixes in the recommended order')
     args = parser.parse_args()
     
     if args.fix_all:
         # Run all fixes in order of priority
-        fix_misc_and_art_tabs()     # First handle Misc tab assignments
+        clean_unknown_era_entries(auto_confirm=True) # First clean up unknown era entries
+        fix_misc_and_art_tabs()     # Then handle Misc tab assignments
         fix_streaming_songs()       # Then handle streaming songs (highest priority)
         fix_released_tabs()         # Finally handle other Released tab assignments
         check_status()
@@ -523,7 +597,9 @@ if __name__ == "__main__":
         fix_misc_and_art_tabs()
     elif args.check:
         check_status()
+    elif args.clean_unknown:
+        clean_unknown_era_entries(auto_confirm=args.auto_confirm)
     else:
         # Default: just check status
         check_status()
-        print("\nUse --released, --misc, --emoji, --reconcile, or --fix-all to fix tab assignments")
+        print("\nUse --released, --misc, --emoji, --reconcile, --clean-unknown, or --fix-all to fix tab assignments")
