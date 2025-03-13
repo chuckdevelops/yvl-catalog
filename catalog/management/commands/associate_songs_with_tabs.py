@@ -95,12 +95,15 @@ class Command(BaseCommand):
             # Secondary tabs to assign in addition to primary tab
             secondary_tab_list = []
             
+            # Check for AI tracks first - they get their own primary category
+            if "🤖" in name or "AI" in name.upper() or "AI Track" in notes:
+                primary_sheet_tab = ai_tracks_tab
+                primary_reason = "AI Track category"
             # Check for official releases
-            if (any(album in era for album in ["Playboi Carti", "Die Lit", "Whole Lotta Red [V4]"]) and 
+            elif (any(album in era for album in ["Playboi Carti", "Die Lit", "Whole Lotta Red [V4]"]) and 
                 ("Single" in type_ or "Album Track" in type_)):
                 primary_sheet_tab = released_tab
                 primary_reason = "Official release"
-            
             # Check for Streaming category
             elif "Streaming" in notes:
                 primary_sheet_tab = released_tab
@@ -152,9 +155,7 @@ class Command(BaseCommand):
             if "🗑️" in name or "🗑" in name or "Worst" in notes:
                 secondary_tab_list.append((worst_of_tab, "Worst Of category"))
             
-            # AI Tracks category
-            if "🤖" in name or "AI" in name.upper() or "AI Track" in notes:
-                secondary_tab_list.append((ai_tracks_tab, "AI Track category"))
+            # AI Tracks are now a primary category, so we don't need this secondary assignment
             
             # Check for other specific types or keywords
             if type_ and ("OG File" in type_ or "OG" in type_):
