@@ -26,8 +26,18 @@ def index(request):
         try:
             secondary_tabs = [category.sheet_tab for category in song.categories.all()]
             song.secondary_tab_names = [tab.name for tab in secondary_tabs]
+            
+            # Filter emoji tabs separately for display purposes
+            song.emoji_tab_names = [tab for tab in song.secondary_tab_names 
+                                   if any(emoji in tab for emoji in ["🏆", "🥇", "⭐", "✨", "🗑️", "🤖"])]
+            
+            # Non-emoji secondary tabs
+            song.other_tab_names = [tab for tab in song.secondary_tab_names 
+                                  if not any(emoji in tab for emoji in ["🏆", "🥇", "⭐", "✨", "🗑️", "🤖"])]
         except Exception:
             song.secondary_tab_names = []
+            song.emoji_tab_names = []
+            song.other_tab_names = []
         
         # All tabs combined
         all_tab_names = [song.primary_tab_name] + song.secondary_tab_names
@@ -118,8 +128,18 @@ def song_list(request):
         try:
             secondary_tabs = [category.sheet_tab for category in song.categories.all()]
             song.secondary_tab_names = [tab.name for tab in secondary_tabs]
+            
+            # Filter emoji tabs separately for display purposes
+            song.emoji_tab_names = [tab for tab in song.secondary_tab_names 
+                                   if any(emoji in tab for emoji in ["🏆", "🥇", "⭐", "✨", "🗑️", "🤖"])]
+            
+            # Non-emoji secondary tabs
+            song.other_tab_names = [tab for tab in song.secondary_tab_names 
+                                  if not any(emoji in tab for emoji in ["🏆", "🥇", "⭐", "✨", "🗑️", "🤖"])]
         except Exception:
             song.secondary_tab_names = []
+            song.emoji_tab_names = []
+            song.other_tab_names = []
         
         # All tabs combined
         all_tab_names = [song.primary_tab_name] + song.secondary_tab_names
@@ -172,8 +192,18 @@ def song_detail(request, song_id):
     try:
         secondary_tabs = [category.sheet_tab for category in song.categories.all()]
         song.secondary_tab_names = [tab.name for tab in secondary_tabs]
+        
+        # Filter emoji tabs separately for display purposes
+        song.emoji_tab_names = [tab for tab in song.secondary_tab_names 
+                               if any(emoji in tab for emoji in ["🏆", "🥇", "⭐", "✨", "🗑️", "🤖"])]
+        
+        # Non-emoji secondary tabs
+        song.other_tab_names = [tab for tab in song.secondary_tab_names 
+                              if not any(emoji in tab for emoji in ["🏆", "🥇", "⭐", "✨", "🗑️", "🤖"])]
     except Exception:
         song.secondary_tab_names = []
+        song.emoji_tab_names = []
+        song.other_tab_names = []
     
     # All tabs combined
     all_tab_names = [song.primary_tab_name] + song.secondary_tab_names

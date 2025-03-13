@@ -25,29 +25,33 @@
                             <td>{{ song.era }}</td>
                         </tr>
                         <tr>
-                            <th>Primary Category:</th>
+                            <th>Categories:</th>
                             <td>
                                 {% if song.primary_tab_name and song.primary_tab_name != "Unknown" %}
-                                    <span class="badge bg-primary">{{ song.primary_tab_name }}</span>
+                                    <!-- Show primary tab (Released/Unreleased) first -->
+                                    <div class="mb-2">
+                                        <span class="badge bg-primary">{{ song.primary_tab_name }}</span>
+                                        
+                                        <!-- Show emoji tabs on the same line as primary tab -->
+                                        {% for tab in song.emoji_tab_names %}
+                                            <span class="badge bg-info">{{ tab }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    <!-- Show other tabs if any exist -->
+                                    {% if song.other_tab_names %}
+                                        <div>
+                                            <strong>Additional Categories:</strong><br>
+                                            {% for tab in song.other_tab_names %}
+                                                <span class="badge bg-secondary">{{ tab }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 {% else %}
                                     <em>Unknown</em>
                                 {% endif %}
                             </td>
                         </tr>
-                        {% if song.secondary_tab_names %}
-                        <tr>
-                            <th>Other Categories:</th>
-                            <td>
-                                {% for tab in song.secondary_tab_names %}
-                                    {% if "🏆" in tab or "🥇" in tab or "⭐" in tab or "✨" in tab or "🗑️" in tab or "🤖" in tab %}
-                                        <span class="badge bg-info">{{ tab }}</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">{{ tab }}</span>
-                                    {% endif %}
-                                {% endfor %}
-                            </td>
-                        </tr>
-                        {% endif %}
                         {% if song.subsection_name %}
                         <tr>
                             <th>Subsection:</th>
