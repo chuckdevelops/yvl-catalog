@@ -55,7 +55,7 @@ class Command(BaseCommand):
             album_copies_tab = SheetTab.objects.get(name="Album Copies")
             social_media_tab = SheetTab.objects.get(name="Social Media")
             fit_pics_tab = SheetTab.objects.get(name="Fit Pics")
-            art_tab = SheetTab.objects.get(name="Art")
+            # Art tab removed - not used anymore
         except SheetTab.DoesNotExist as e:
             self.stdout.write(self.style.ERROR(f"Sheet tab not found: {e}"))
             return
@@ -173,8 +173,7 @@ class Command(BaseCommand):
                     secondary_tab_list.append((fakes_tab, "Fake keyword"))
                 if "Tracklist" in name:
                     secondary_tab_list.append((tracklists_tab, "Tracklist keyword"))
-                if "Art" in name or "Cover" in name:
-                    secondary_tab_list.append((art_tab, "Art/Cover keyword"))
+                # Art category removed
                 if "Buy" in notes or "Bought" in notes or "Purchase" in notes:
                     secondary_tab_list.append((buys_tab, "Buy keyword in notes"))
                 if "Social Media" in name or "Instagram" in name or "Twitter" in name:
