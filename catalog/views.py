@@ -136,7 +136,15 @@ def song_list(request):
             # Non-emoji secondary tabs
             song.other_tab_names = [tab for tab in song.secondary_tab_names 
                                   if not any(emoji in tab for emoji in ["🏆", "🥇", "⭐", "✨", "🗑️", "🤖"])]
-        except Exception:
+            
+            # Debug: Print to console for the first 5 songs
+            if len(songs_with_tabs) < 5:
+                print(f"DEBUG - Song: {song.name}")
+                print(f"  Primary: {song.primary_tab_name}")
+                print(f"  Emoji tabs: {song.emoji_tab_names}")
+                print(f"  Other tabs: {song.other_tab_names}")
+        except Exception as e:
+            print(f"ERROR processing {song.name}: {str(e)}")
             song.secondary_tab_names = []
             song.emoji_tab_names = []
             song.other_tab_names = []

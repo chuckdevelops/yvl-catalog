@@ -7,7 +7,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "carti_project.settings")
 django.setup()
 
 from django.db import models
-from catalog.models import SheetTab, SongMetadata, CartiCatalog
+from catalog.models import SheetTab, SongMetadata, CartiCatalog, SongCategory
 
 def check_tab_stats():
     """Print statistics on sheet tab assignments"""
@@ -16,17 +16,24 @@ def check_tab_stats():
     # Check basic stats on current tab assignments
     tabs = SheetTab.objects.all().order_by('name')
     for tab in tabs:
-        song_count = SongMetadata.objects.filter(sheet_tab=tab).count()
-        print(f'{tab.name}: {song_count} songs')
+        primary_count = SongMetadata.objects.filter(sheet_tab=tab).count()
+        secondary_count = SongCategory.objects.filter(sheet_tab=tab).count()
+        print(f'{tab.name}: {primary_count} primary, {secondary_count} secondary')
     
     # Check songs without tab assignments
     total_songs = CartiCatalog.objects.count()
     assigned_songs = SongMetadata.objects.filter(sheet_tab__isnull=False).count()
     unassigned = total_songs - assigned_songs
     
+    # Check secondary category stats
+    total_secondary = SongCategory.objects.count()
+    songs_with_secondary = CartiCatalog.objects.filter(categories__isnull=False).distinct().count()
+    
     print(f'\nTotal songs: {total_songs}')
-    print(f'Assigned songs: {assigned_songs}')
+    print(f'Primary tab assignments: {assigned_songs}')
     print(f'Unassigned songs: {unassigned}')
+    print(f'Secondary category assignments: {total_secondary}')
+    print(f'Songs with secondary categories: {songs_with_secondary}')
 
 def check_era_distribution():
     """Print distribution of songs by era"""
@@ -134,20 +141,48 @@ def check_potential_issues():
                 print(f"... and {misplaced_songs.count() - 10} more.")
 
 def list_songs_for_tab(tab_name, limit=50):
-    """List songs for a specific tab"""
+    """List songs for a specific tab (primary and secondary)"""
     tab = SheetTab.objects.filter(name=tab_name).first()
     if not tab:
         print(f"Tab '{tab_name}' not found.")
         return
     
-    songs = CartiCatalog.objects.filter(metadata__sheet_tab=tab)
-    print(f"\n===== SONGS IN TAB: {tab_name} ({songs.count()} total) =====")
+    # Primary tab assignments
+    primary_songs = CartiCatalog.objects.filter(metadata__sheet_tab=tab)
     
-    for i, song in enumerate(songs[:limit]):
-        print(f"{i+1}. {song.name} (Era: {song.era}, Type: {song.type})")
+    # Secondary category assignments
+    secondary_songs = CartiCatalog.objects.filter(categories__sheet_tab=tab)
     
-    if songs.count() > limit:
-        print(f"... and {songs.count() - limit} more.")
+    # Combined (remove duplicates)
+    all_songs = primary_songs.union(secondary_songs)
+    
+    print(f"\n===== SONGS IN TAB: {tab_name} =====")
+    print(f"Primary: {primary_songs.count()}, Secondary: {secondary_songs.count()}, Total: {all_songs.count()}")
+    
+    print("\nPRIMARY ASSIGNMENTS:")
+    for i, song in enumerate(primary_songs[:limit//2]):
+        # Show what other categories this song has
+        other_cats = [cat.sheet_tab.name for cat in SongCategory.objects.filter(song=song)]
+        cats_str = f" - Also in: {', '.join(other_cats)}" if other_cats else ""
+        print(f"{i+1}. {song.name} (Era: {song.era}){cats_str}")
+    
+    if primary_songs.count() > limit//2:
+        print(f"... and {primary_songs.count() - limit//2} more.")
+        
+    print("\nSECONDARY ASSIGNMENTS:")
+    for i, song in enumerate(secondary_songs[:limit//2]):
+        # Show the primary tab
+        primary_tab = "Unknown"
+        try:
+            if song.metadata and song.metadata.sheet_tab:
+                primary_tab = song.metadata.sheet_tab.name
+        except:
+            pass
+        
+        print(f"{i+1}. {song.name} (Era: {song.era}) - Primary: {primary_tab}")
+    
+    if secondary_songs.count() > limit//2:
+        print(f"... and {secondary_songs.count() - limit//2} more.")
 
 def bulk_move_songs(tab_name, criteria_field, criteria_value, dest_tab_name):
     """Bulk move songs matching criteria to another tab"""
