@@ -96,9 +96,12 @@ class Command(BaseCommand):
             secondary_tab_list = []
             
             # Check for AI tracks first - they get their own primary category
+            # AI tracks are standalone and don't get secondary categories
             if "🤖" in name or "AI" in name.upper() or "AI Track" in notes:
                 primary_sheet_tab = ai_tracks_tab
                 primary_reason = "AI Track category"
+                # AI tracks should have no secondary categories
+                secondary_tab_list = []
             # Check for official releases
             elif (any(album in era for album in ["Playboi Carti", "Die Lit", "Whole Lotta Red [V4]"]) and 
                 ("Single" in type_ or "Album Track" in type_)):
@@ -113,73 +116,75 @@ class Command(BaseCommand):
                 primary_sheet_tab = unreleased_tab
                 primary_reason = "Not an official release or streaming"
             
-            # Check for Recent category - most recent leak or file dates
-            # We'll mark songs with a "Recent" note, but also check for recent dates
-            if "Recent" in notes and not "Recently" in notes:
-                secondary_tab_list.append((recent_tab, "Recent in notes"))
+            # Only add secondary categories for non-AI tracks
+            if primary_sheet_tab != ai_tracks_tab:
+                # Check for Recent category - most recent leak or file dates
+                # We'll mark songs with a "Recent" note, but also check for recent dates
+                if "Recent" in notes and not "Recently" in notes:
+                    secondary_tab_list.append((recent_tab, "Recent in notes"))
+                
+                # Try to check if dates are in 2024 or 2025 (adjust these years as needed)
+                # This is a simple string check since dates are stored as strings
+                current_year = "2025"
+                previous_year = "2024"
+                
+                file_date = song.file_date if song.file_date else ""
+                if (
+                    (leak_date and (current_year in leak_date or previous_year in leak_date)) or
+                    (file_date and (current_year in file_date or previous_year in file_date))
+                ):
+                    secondary_tab_list.append((recent_tab, "Recent date detected"))
             
-            # Try to check if dates are in 2024 or 2025 (adjust these years as needed)
-            # This is a simple string check since dates are stored as strings
-            current_year = "2025"
-            previous_year = "2024"
-            
-            file_date = song.file_date if song.file_date else ""
-            if (
-                (leak_date and (current_year in leak_date or previous_year in leak_date)) or
-                (file_date and (current_year in file_date or previous_year in file_date))
-            ):
-                secondary_tab_list.append((recent_tab, "Recent date detected"))
-            
-            # Check for category based on type (for Stems)
-            if type_ and any(stem_type in type_.lower() for stem_type in ["instrumentals", "samples", "sessions", "others"]):
-                secondary_tab_list.append((stems_tab, f"Stem type: {type_}"))
-            
-            # Check for categories based on emojis in name or notes
-            # Grails category
-            if "🏆" in name or "Grail" in name or "Grail" in notes:
-                secondary_tab_list.append((grails_tab, "Grails category"))
-            
-            # Wanted category
-            if "🥇" in name or "Wanted" in name or "Wanted" in notes:
-                secondary_tab_list.append((wanted_tab, "Wanted category"))
-            
-            # Best Of category
-            if "⭐" in name or "Best" in notes:
-                secondary_tab_list.append((best_of_tab, "Best Of category"))
-            
-            # Special category
-            if "✨" in name or "Special" in notes:
-                secondary_tab_list.append((special_tab, "Special category"))
-            
-            # Worst Of category
-            if "🗑️" in name or "🗑" in name or "Worst" in notes:
-                secondary_tab_list.append((worst_of_tab, "Worst Of category"))
-            
-            # AI Tracks are now a primary category, so we don't need this secondary assignment
-            
-            # Check for other specific types or keywords
-            if type_ and ("OG File" in type_ or "OG" in type_):
-                secondary_tab_list.append((og_files_tab, "OG File type"))
-            if "Stem" in type_ or "Stems" in name or "Vocal" in name:
-                secondary_tab_list.append((stems_tab, "Stems keyword"))
-            if "Remaster" in name or "Remastered" in name:
-                secondary_tab_list.append((remasters_tab, "Remaster keyword"))
-            if "Fake" in name:
-                secondary_tab_list.append((fakes_tab, "Fake keyword"))
-            if "Tracklist" in name:
-                secondary_tab_list.append((tracklists_tab, "Tracklist keyword"))
-            if "Art" in name or "Cover" in name:
-                secondary_tab_list.append((art_tab, "Art/Cover keyword"))
-            if "Buy" in notes or "Bought" in notes or "Purchase" in notes:
-                secondary_tab_list.append((buys_tab, "Buy keyword in notes"))
-            if "Social Media" in name or "Instagram" in name or "Twitter" in name:
-                secondary_tab_list.append((social_media_tab, "Social Media keyword"))
-            if "Interview" in name:
-                secondary_tab_list.append((interviews_tab, "Interview keyword"))
-            if "Album Cop" in name:
-                secondary_tab_list.append((album_copies_tab, "Album Copy keyword"))
-            if "Recently Recorded" in notes or "New Recording" in notes:
-                secondary_tab_list.append((recently_recorded_tab, "Recently Recorded in notes"))
+            # Only add secondary categories for non-AI tracks
+            if primary_sheet_tab != ai_tracks_tab:
+                # Check for category based on type (for Stems)
+                if type_ and any(stem_type in type_.lower() for stem_type in ["instrumentals", "samples", "sessions", "others"]):
+                    secondary_tab_list.append((stems_tab, f"Stem type: {type_}"))
+                
+                # Check for categories based on emojis in name or notes
+                # Grails category
+                if "🏆" in name or "Grail" in name or "Grail" in notes:
+                    secondary_tab_list.append((grails_tab, "Grails category"))
+                
+                # Wanted category
+                if "🥇" in name or "Wanted" in name or "Wanted" in notes:
+                    secondary_tab_list.append((wanted_tab, "Wanted category"))
+                
+                # Best Of category
+                if "⭐" in name or "Best" in notes:
+                    secondary_tab_list.append((best_of_tab, "Best Of category"))
+                
+                # Special category
+                if "✨" in name or "Special" in notes:
+                    secondary_tab_list.append((special_tab, "Special category"))
+                
+                # Worst Of category
+                if "🗑️" in name or "🗑" in name or "Worst" in notes:
+                    secondary_tab_list.append((worst_of_tab, "Worst Of category"))
+                
+                # Check for other specific types or keywords
+                if type_ and ("OG File" in type_ or "OG" in type_):
+                    secondary_tab_list.append((og_files_tab, "OG File type"))
+                if "Stem" in type_ or "Stems" in name or "Vocal" in name:
+                    secondary_tab_list.append((stems_tab, "Stems keyword"))
+                if "Remaster" in name or "Remastered" in name:
+                    secondary_tab_list.append((remasters_tab, "Remaster keyword"))
+                if "Fake" in name:
+                    secondary_tab_list.append((fakes_tab, "Fake keyword"))
+                if "Tracklist" in name:
+                    secondary_tab_list.append((tracklists_tab, "Tracklist keyword"))
+                if "Art" in name or "Cover" in name:
+                    secondary_tab_list.append((art_tab, "Art/Cover keyword"))
+                if "Buy" in notes or "Bought" in notes or "Purchase" in notes:
+                    secondary_tab_list.append((buys_tab, "Buy keyword in notes"))
+                if "Social Media" in name or "Instagram" in name or "Twitter" in name:
+                    secondary_tab_list.append((social_media_tab, "Social Media keyword"))
+                if "Interview" in name:
+                    secondary_tab_list.append((interviews_tab, "Interview keyword"))
+                if "Album Cop" in name:
+                    secondary_tab_list.append((album_copies_tab, "Album Copy keyword"))
+                if "Recently Recorded" in notes or "New Recording" in notes:
+                    secondary_tab_list.append((recently_recorded_tab, "Recently Recorded in notes"))
             
             # Create or update primary metadata for this song
             try:
