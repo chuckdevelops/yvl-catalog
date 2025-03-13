@@ -460,6 +460,8 @@ def run_tab_association(respect_scraper=True):
 
 def analyze_tab_assignments():
     """Print tab statistics to help diagnose issues"""
+    from django.db import models  # Add missing import
+    
     print("\n===== TAB ASSIGNMENT ANALYSIS =====")
     
     # Total songs
@@ -513,13 +515,22 @@ def analyze_tab_assignments():
             print(f"  {emoji} ({expected_tab}): {misplaced} songs in wrong tabs")
 
 if __name__ == "__main__":
-    # Ask for confirmation
-    print("This script will scrape the Google Sheet and update the database.")
-    print("1. Scrape and update with tab data from sheet (RECOMMENDED)")
-    print("2. Scrape, update, and force re-assign ALL tabs based on rules")
-    print("3. Just scrape and update data (no tab assignment)")
+    import sys
     
-    choice = input("Choose an option (1-3, default is 1): ").strip()
+    # Check for command-line args
+    if len(sys.argv) > 1:
+        choice = sys.argv[1]
+    else:
+        # Ask for confirmation
+        print("This script will scrape the Google Sheet and update the database.")
+        print("1. Scrape and update with tab data from sheet (RECOMMENDED)")
+        print("2. Scrape, update, and force re-assign ALL tabs based on rules")
+        print("3. Just scrape and update data (no tab assignment)")
+        
+        try:
+            choice = input("Choose an option (1-3, default is 1): ").strip()
+        except (EOFError, KeyboardInterrupt):
+            choice = "1"  # Default if interrupted
     
     if choice == "2":
         print("Option 2: Will force-reassign ALL tab assignments based on rules.")
