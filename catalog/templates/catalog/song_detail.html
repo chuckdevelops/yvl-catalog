@@ -25,15 +25,29 @@
                             <td>{{ song.era }}</td>
                         </tr>
                         <tr>
-                            <th>Sheet Tab:</th>
+                            <th>Primary Category:</th>
                             <td>
-                                {% if song.sheet_tab_name and song.sheet_tab_name != "Unknown" %}
-                                    {{ song.sheet_tab_name }}
+                                {% if song.primary_tab_name and song.primary_tab_name != "Unknown" %}
+                                    <span class="badge bg-primary">{{ song.primary_tab_name }}</span>
                                 {% else %}
                                     <em>Unknown</em>
                                 {% endif %}
                             </td>
                         </tr>
+                        {% if song.secondary_tab_names %}
+                        <tr>
+                            <th>Other Categories:</th>
+                            <td>
+                                {% for tab in song.secondary_tab_names %}
+                                    {% if "🏆" in tab or "🥇" in tab or "⭐" in tab or "✨" in tab or "🗑️" in tab or "🤖" in tab %}
+                                        <span class="badge bg-info">{{ tab }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ tab }}</span>
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        {% endif %}
                         {% if song.subsection_name %}
                         <tr>
                             <th>Subsection:</th>

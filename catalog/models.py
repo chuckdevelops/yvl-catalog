@@ -20,6 +20,7 @@ class SongMetadata(models.Model):
     """Model to store additional metadata for songs that doesn't exist in the original database"""
     id = models.AutoField(primary_key=True)
     song = models.OneToOneField('CartiCatalog', on_delete=models.CASCADE, related_name='metadata')
+    # Primary sheet tab (Released or Unreleased)
     sheet_tab = models.ForeignKey(SheetTab, on_delete=models.SET_NULL, null=True, blank=True, related_name='songs')
     subsection = models.CharField(max_length=100, null=True, blank=True)
     
@@ -31,6 +32,23 @@ class SongMetadata(models.Model):
     
     def __str__(self):
         return f"Metadata for {self.song}"
+
+class SongCategory(models.Model):
+    """Model to store additional categories (tabs) that a song belongs to besides its primary tab"""
+    id = models.AutoField(primary_key=True)
+    song = models.ForeignKey('CartiCatalog', on_delete=models.CASCADE, related_name='categories')
+    sheet_tab = models.ForeignKey(SheetTab, on_delete=models.CASCADE, related_name='categorized_songs')
+    
+    class Meta:
+        managed = True
+        db_table = 'song_category'
+        verbose_name = 'Song Category'
+        verbose_name_plural = 'Song Categories'
+        # Make sure we don't duplicate song-tab pairs
+        unique_together = ('song', 'sheet_tab')
+    
+    def __str__(self):
+        return f"{self.song} - {self.sheet_tab}"
 
 class CartiCatalog(models.Model):
     """Model mapped to existing carti_catalog table"""
@@ -62,7 +80,7 @@ class CartiCatalog(models.Model):
         
     @property
     def sheet_tab(self):
-        """Get the sheet tab from the metadata"""
+        """Get the primary sheet tab from the metadata (Released or Unreleased)"""
         try:
             return self.metadata.sheet_tab
         except (SongMetadata.DoesNotExist, AttributeError):
@@ -75,3 +93,34 @@ class CartiCatalog(models.Model):
             return self.metadata.subsection
         except (SongMetadata.DoesNotExist, AttributeError):
             return None
+            
+    @property
+    def all_tabs(self):
+        """Get all sheet tabs for this song (primary + secondary categories)"""
+        tabs = []
+        # Get primary tab first
+        primary_tab = self.sheet_tab
+        if primary_tab:
+            tabs.append(primary_tab)
+        
+        # Get secondary tabs
+        try:
+            for category in self.categories.all():
+                if category.sheet_tab != primary_tab:  # Avoid duplicates
+                    tabs.append(category.sheet_tab)
+        except Exception:
+            pass
+            
+        return tabs
+        
+    @property
+    def is_released(self):
+        """Check if song is in the Released tab"""
+        tab = self.sheet_tab
+        return tab and tab.name == "Released"
+        
+    @property
+    def is_unreleased(self):
+        """Check if song is in the Unreleased tab"""
+        tab = self.sheet_tab
+        return tab and tab.name == "Unreleased"

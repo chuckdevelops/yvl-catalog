@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from django.db import models
 from catalog.models import CartiCatalog, SheetTab, SongMetadata
 import re
+from datetime import datetime
 
 class Command(BaseCommand):
     help = 'Associate songs with sheet tabs based on scraped sheet structure, with fallback to emoji markers and other criteria'
@@ -74,108 +75,160 @@ class Command(BaseCommand):
         updated_count = 0
         created_count = 0
         
+        # Track secondary tabs for multi-categorization
+        secondary_tabs = {}
+        
         # Process songs
         for song in songs_to_process:
             name = song.name if song.name else ""
             type_ = song.type if song.type else ""
             notes = song.notes if song.notes else ""
             era = song.era if song.era else ""
+            leak_date = song.leak_date if song.leak_date else ""
+            quality = song.quality if song.quality else ""
+            available_length = song.available_length if song.available_length else ""
             
-            # Determine the appropriate sheet tab based on various criteria
-            sheet_tab = None
-            reason = ""
+            # Determine the appropriate primary sheet tab (Released or Unreleased)
+            primary_sheet_tab = None
+            primary_reason = ""
             
-            # Check for official releases - fixed the parentheses issue
+            # Secondary tabs to assign in addition to primary tab
+            secondary_tab_list = []
+            
+            # Check for official releases
             if (any(album in era for album in ["Playboi Carti", "Die Lit", "Whole Lotta Red [V4]"]) and 
                 ("Single" in type_ or "Album Track" in type_)):
-                sheet_tab = released_tab
-                reason = "Official release"
+                primary_sheet_tab = released_tab
+                primary_reason = "Official release"
             
             # Check for Streaming category
             elif "Streaming" in notes:
-                sheet_tab = released_tab
-                reason = "Streaming category"
-            
-            # Try to match by emoji first
-            elif "🏆" in name:
-                sheet_tab = grails_tab
-                reason = "Grails emoji in name"
-            elif "🥇" in name:
-                sheet_tab = wanted_tab
-                reason = "Wanted emoji in name"
-            elif "⭐" in name:
-                sheet_tab = best_of_tab
-                reason = "Best Of emoji in name"
-            elif "✨" in name:
-                sheet_tab = special_tab
-                reason = "Special emoji in name"
-            elif "🗑️" in name or "🗑" in name:
-                sheet_tab = worst_of_tab
-                reason = "Worst Of emoji in name"
-            elif "🤖" in name:
-                sheet_tab = ai_tracks_tab
-                reason = "AI emoji in name"
-            
-            # Check for specific types or keywords
-            elif type_ and ("OG File" in type_ or "OG" in type_):
-                sheet_tab = og_files_tab
-                reason = "OG File type"
-            elif "Stem" in type_ or "Stems" in name or "Vocal" in name:
-                sheet_tab = stems_tab
-                reason = "Stems keyword"
-            elif "Remaster" in name or "Remastered" in name:
-                sheet_tab = remasters_tab
-                reason = "Remaster keyword"
-            elif "Fake" in name or "AI" in name:
-                sheet_tab = fakes_tab
-                reason = "Fake/AI keyword"
-            elif "Tracklist" in name:
-                sheet_tab = tracklists_tab
-                reason = "Tracklist keyword"
-            elif "Art" in name or "Cover" in name:
-                sheet_tab = art_tab
-                reason = "Art/Cover keyword"
-            elif "Buy" in notes or "Bought" in notes or "Purchase" in notes:
-                sheet_tab = buys_tab
-                reason = "Buy keyword in notes"
-            elif "Social Media" in name or "Instagram" in name or "Twitter" in name:
-                sheet_tab = social_media_tab
-                reason = "Social Media keyword"
-            elif "Interview" in name:
-                sheet_tab = interviews_tab
-                reason = "Interview keyword"
-            elif "Album Cop" in name:
-                sheet_tab = album_copies_tab
-                reason = "Album Copy keyword"
-            elif "Recently Recorded" in notes or "New Recording" in notes:
-                sheet_tab = recently_recorded_tab
-                reason = "Recently Recorded in notes"
-            elif "Recent" in notes and not "Recently" in notes:
-                sheet_tab = recent_tab
-                reason = "Recent in notes"
+                primary_sheet_tab = released_tab
+                primary_reason = "Streaming category"
             else:
-                # Default to Unreleased
-                sheet_tab = unreleased_tab
-                reason = "Default assignment (no specific criteria matched)"
+                # Default to Unreleased for all other songs
+                primary_sheet_tab = unreleased_tab
+                primary_reason = "Not an official release or streaming"
             
-            # Get or create metadata for this song
+            # Check for Recent category - most recent leak or file dates
+            # We'll mark songs with a "Recent" note, but also check for recent dates
+            if "Recent" in notes and not "Recently" in notes:
+                secondary_tab_list.append((recent_tab, "Recent in notes"))
+            
+            # Try to check if dates are in 2024 or 2025 (adjust these years as needed)
+            # This is a simple string check since dates are stored as strings
+            current_year = "2025"
+            previous_year = "2024"
+            
+            if (
+                (leak_date and (current_year in leak_date or previous_year in leak_date)) or
+                (file_date and (current_year in file_date or previous_year in file_date))
+            ):
+                secondary_tab_list.append((recent_tab, "Recent date detected"))
+            
+            # Check for category based on type (for Stems)
+            if type_ and any(stem_type in type_.lower() for stem_type in ["instrumentals", "samples", "sessions", "others"]):
+                secondary_tab_list.append((stems_tab, f"Stem type: {type_}"))
+            
+            # Check for categories based on emojis in name or notes
+            # Grails category
+            if "🏆" in name or "Grail" in name or "Grail" in notes:
+                secondary_tab_list.append((grails_tab, "Grails category"))
+            
+            # Wanted category
+            if "🥇" in name or "Wanted" in name or "Wanted" in notes:
+                secondary_tab_list.append((wanted_tab, "Wanted category"))
+            
+            # Best Of category
+            if "⭐" in name or "Best" in notes:
+                secondary_tab_list.append((best_of_tab, "Best Of category"))
+            
+            # Special category
+            if "✨" in name or "Special" in notes:
+                secondary_tab_list.append((special_tab, "Special category"))
+            
+            # Worst Of category
+            if "🗑️" in name or "🗑" in name or "Worst" in notes:
+                secondary_tab_list.append((worst_of_tab, "Worst Of category"))
+            
+            # AI Tracks category
+            if "🤖" in name or "AI" in name.upper() or "AI Track" in notes:
+                secondary_tab_list.append((ai_tracks_tab, "AI Track category"))
+            
+            # Check for other specific types or keywords
+            if type_ and ("OG File" in type_ or "OG" in type_):
+                secondary_tab_list.append((og_files_tab, "OG File type"))
+            if "Stem" in type_ or "Stems" in name or "Vocal" in name:
+                secondary_tab_list.append((stems_tab, "Stems keyword"))
+            if "Remaster" in name or "Remastered" in name:
+                secondary_tab_list.append((remasters_tab, "Remaster keyword"))
+            if "Fake" in name:
+                secondary_tab_list.append((fakes_tab, "Fake keyword"))
+            if "Tracklist" in name:
+                secondary_tab_list.append((tracklists_tab, "Tracklist keyword"))
+            if "Art" in name or "Cover" in name:
+                secondary_tab_list.append((art_tab, "Art/Cover keyword"))
+            if "Buy" in notes or "Bought" in notes or "Purchase" in notes:
+                secondary_tab_list.append((buys_tab, "Buy keyword in notes"))
+            if "Social Media" in name or "Instagram" in name or "Twitter" in name:
+                secondary_tab_list.append((social_media_tab, "Social Media keyword"))
+            if "Interview" in name:
+                secondary_tab_list.append((interviews_tab, "Interview keyword"))
+            if "Album Cop" in name:
+                secondary_tab_list.append((album_copies_tab, "Album Copy keyword"))
+            if "Recently Recorded" in notes or "New Recording" in notes:
+                secondary_tab_list.append((recently_recorded_tab, "Recently Recorded in notes"))
+            
+            # Create or update primary metadata for this song
             try:
                 metadata = SongMetadata.objects.get(song=song)
                 
                 # If metadata exists but has no sheet_tab or we're forcing an update
                 if force_update or metadata.sheet_tab is None:
-                    metadata.sheet_tab = sheet_tab
+                    metadata.sheet_tab = primary_sheet_tab
                     metadata.save()
                     updated_count += 1
-                    self.stdout.write(f"Updated sheet tab for song: {song} to {sheet_tab.name} [{reason}]")
+                    self.stdout.write(f"Updated primary sheet tab for song: {song} to {primary_sheet_tab.name} [{primary_reason}]")
             except SongMetadata.DoesNotExist:
                 # Create new metadata
                 metadata = SongMetadata.objects.create(
                     song=song,
-                    sheet_tab=sheet_tab
+                    sheet_tab=primary_sheet_tab
                 )
                 created_count += 1
-                self.stdout.write(f"Created sheet tab association for song: {song} as {sheet_tab.name} [{reason}]")
+                self.stdout.write(f"Created primary sheet tab association for song: {song} as {primary_sheet_tab.name} [{primary_reason}]")
+            
+            # Track secondary tabs for later processing
+            if song.id not in secondary_tabs:
+                secondary_tabs[song.id] = []
+            
+            for tab, reason in secondary_tab_list:
+                if tab != primary_sheet_tab:  # Don't duplicate the primary tab
+                    secondary_tabs[song.id].append((tab, reason))
+        
+        # Process secondary tabs
+        secondary_created = 0
+        
+        for song_id, tabs in secondary_tabs.items():
+            try:
+                song = CartiCatalog.objects.get(id=song_id)
+                for tab, reason in tabs:
+                    # Create a secondary category using the SongCategory model
+                    from catalog.models import SongCategory
+                    
+                    # Create or get the category
+                    category, created = SongCategory.objects.get_or_create(
+                        song=song,
+                        sheet_tab=tab
+                    )
+                    
+                    if created:
+                        self.stdout.write(f"Created secondary category {tab.name} for song: {song} [{reason}]")
+                        secondary_created += 1
+                    else:
+                        self.stdout.write(f"Secondary category {tab.name} already exists for song: {song}")
+            except CartiCatalog.DoesNotExist:
+                continue
         
         if not respect_scraper:
             # Special handling for Released tab - make sure all official released songs are there
@@ -207,5 +260,5 @@ class Command(BaseCommand):
                 self.stdout.write(f"Updated {released_updated} songs to Released tab based on type")
         
         self.stdout.write(self.style.SUCCESS(
-            f'Successfully processed songs: created {created_count}, updated {updated_count}'
+            f'Successfully processed songs: created {created_count}, updated {updated_count}, identified {secondary_created} secondary tab assignments'
         ))

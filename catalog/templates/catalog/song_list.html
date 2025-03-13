@@ -89,8 +89,19 @@
                             </td>
                             <td>{% if song.era %}{{ song.era }}{% else %}<em>Unknown</em>{% endif %}</td>
                             <td>
-                                {% if song.sheet_tab_name and song.sheet_tab_name != "Unknown" %}
-                                    {{ song.sheet_tab_name }}
+                                {% if song.primary_tab_name and song.primary_tab_name != "Unknown" %}
+                                    <!-- Always show Released/Unreleased primary tab -->
+                                    <span class="badge bg-primary">{{ song.primary_tab_name }}</span>
+                                    
+                                    <!-- Show emoji tabs more prominently -->
+                                    {% for tab in song.secondary_tab_names %}
+                                        {% if "🏆" in tab or "🥇" in tab or "⭐" in tab or "✨" in tab or "🗑️" in tab or "🤖" in tab %}
+                                            <span class="badge bg-info">{{ tab }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ tab }}</span>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
                                     {% if song.subsection_name %}
                                         <small class="text-muted">({{ song.subsection_name }})</small>
                                     {% endif %}
