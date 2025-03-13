@@ -25,6 +25,10 @@
                             <td>{{ song.era }}</td>
                         </tr>
                         <tr>
+                            <th>Sheet Tab:</th>
+                            <td>{% if song.sheet_tab %}{{ song.sheet_tab.name }}{% else %}<em>Unknown</em>{% endif %}</td>
+                        </tr>
+                        <tr>
                             <th>Type:</th>
                             <td>{{ song.type }}</td>
                         </tr>

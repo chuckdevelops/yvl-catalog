@@ -25,6 +25,17 @@
                 </select>
             </div>
             <div class="col-md-4">
+                <label for="sheet_tab" class="form-label">Sheet Tab</label>
+                <select name="sheet_tab" id="sheet_tab" class="form-select">
+                    <option value="">All Tabs</option>
+                    {% for tab in sheet_tabs %}
+                        <option value="{{ tab.id }}" {% if sheet_tab_filter == tab.id|stringformat:"s" %}selected{% endif %}>
+                            {{ tab.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
                 <label for="quality" class="form-label">Quality</label>
                 <select name="quality" id="quality" class="form-select">
                     <option value="">All Qualities</option>
@@ -37,13 +48,13 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-12">
                 <label for="q" class="form-label">Search</label>
                 <input type="text" name="q" id="q" class="form-control" placeholder="Search..." value="{{ query }}">
             </div>
             <div class="col-12">
                 <button type="submit" class="btn btn-primary">Apply Filters</button>
-                {% if era_filter or quality_filter or query %}
+                {% if era_filter or quality_filter or sheet_tab_filter or query %}
                     <a href="{% url 'catalog:song_list' %}" class="btn btn-secondary">Clear Filters</a>
                 {% endif %}
             </div>
@@ -63,6 +74,7 @@
                     <tr>
                         <th>Name</th>
                         <th>Era</th>
+                        <th>Sheet Tab</th>
                         <th>Type</th>
                         <th>Quality</th>
                         <th>Leak Date</th>
@@ -76,6 +88,13 @@
                                 <a href="{% url 'catalog:song_detail' song_id=song.id %}">{{ song.name }}</a>
                             </td>
                             <td>{% if song.era %}{{ song.era }}{% else %}<em>Unknown</em>{% endif %}</td>
+                            <td>
+                                {% if song.sheet_tab %}
+                                    {{ song.sheet_tab.name }}
+                                {% else %}
+                                    <em>Unknown</em>
+                                {% endif %}
+                            </td>
                             <td>{{ song.type }}</td>
                             <td>{{ song.quality }}</td>
                             <td>{{ song.leak_date }}</td>
@@ -106,7 +125,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center">No songs match your filters.</td>
+                            <td colspan="7" class="text-center">No songs match your filters.</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -119,10 +138,10 @@
                 <ul class="pagination justify-content-center">
                     {% if page_obj.has_previous %}
                         <li class="page-item">
-                            <a class="page-link" href="?page=1{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}">First</a>
+                            <a class="page-link" href="?page=1{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if sheet_tab_filter %}&sheet_tab={{ sheet_tab_filter }}{% endif %}">First</a>
                         </li>
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}">Previous</a>
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if sheet_tab_filter %}&sheet_tab={{ sheet_tab_filter }}{% endif %}">Previous</a>
                         </li>
                     {% endif %}
 
@@ -132,10 +151,10 @@
 
                     {% if page_obj.has_next %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}">Next</a>
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if sheet_tab_filter %}&sheet_tab={{ sheet_tab_filter }}{% endif %}">Next</a>
                         </li>
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}">Last</a>
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if sheet_tab_filter %}&sheet_tab={{ sheet_tab_filter }}{% endif %}">Last</a>
                         </li>
                     {% endif %}
                 </ul>
