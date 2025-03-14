@@ -5,11 +5,27 @@ register = template.Library()
 @register.filter
 def filter_ai_badge(emoji_tabs, song_name):
     """
-    Filter out AI badges for non-AI songs
-    Only show AI badge for songs starting with 🤖
-    
-    Note: This filter is now primarily a passthrough since the view handles
-    the filtering of AI badges. Keeping it for template compatibility.
+    Filter out emoji badges for songs that don't start with the corresponding emoji
     """
-    # Now just return the tabs without extra filtering since view handles this
-    return emoji_tabs
+    # Create a mapping of emoji tabs to their emoji prefixes
+    emoji_tab_map = {
+        "🏆 Grails": "🏆",
+        "🥇 Wanted": "🥇",
+        "⭐ Best Of": "⭐",
+        "✨ Special": "✨",
+        "🗑️ Worst Of": "🗑️",
+        "🤖 AI Tracks": "🤖"
+    }
+    
+    # Filter out emoji badges for songs without matching prefixes
+    filtered_tabs = []
+    for tab in emoji_tabs:
+        # If this is an emoji tab, check for matching prefix
+        if tab in emoji_tab_map:
+            emoji_prefix = emoji_tab_map[tab]
+            if song_name and song_name.startswith(emoji_prefix):
+                filtered_tabs.append(tab)
+        else:
+            # Keep all non-emoji tabs
+            filtered_tabs.append(tab)
+    return filtered_tabs

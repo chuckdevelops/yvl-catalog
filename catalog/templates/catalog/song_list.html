@@ -83,9 +83,21 @@
                 </thead>
                 <tbody>
                     {% for song in page_obj %}
+                        {% if song.needs_album_header %}
+                            <!-- Album header only for the first song in an album -->
+                            <tr class="table-primary">
+                                <td colspan="7" class="text-center fw-bold">
+                                    Album: {{ song.album_group_name }}
+                                </td>
+                            </tr>
+                        {% endif %}
+
                         <tr>
                             <td>
                                 <a href="{% url 'catalog:song_detail' song_id=song.id %}">{{ song.name }}</a>
+                                {% if song.display_track_number %}
+                                    <span class="badge bg-warning text-dark">Track #{{ song.display_track_number }}</span>
+                                {% endif %}
                             </td>
                             <td>{% if song.era %}{{ song.era }}{% else %}<em>Unknown</em>{% endif %}</td>
                             <td>
@@ -94,9 +106,12 @@
                                     <div class="mb-1">
                                         <span class="badge bg-primary">{{ song.primary_tab_name }}</span>
                                         
-                                        <!-- Show emoji tabs on the same line with primary tab -->
-                                        {% for tab in song.emoji_tab_names %}
+                                        <!-- Use custom filter to handle AI badges -->
+                                        {% load catalog_filters %}
+                                        {% for tab in song.emoji_tab_names|filter_ai_badge:song.name %}
                                             <span class="badge bg-info">{{ tab }}</span>
+                                        {% empty %}
+                                            <!-- No emoji tabs -->
                                         {% endfor %}
                                     </div>
                                     
@@ -116,9 +131,9 @@
                                     <em>Unknown</em>
                                 {% endif %}
                             </td>
-                            <td>{{ song.type }}</td>
-                            <td>{{ song.quality }}</td>
-                            <td>{{ song.leak_date }}</td>
+                            <td>{% if song.type and song.type != "NaN" and song.type != "nan" %}{{ song.type }}{% else %}<em></em>{% endif %}</td>
+                            <td>{% if song.quality and song.quality != "NaN" and song.quality != "nan" %}{{ song.quality }}{% else %}<em></em>{% endif %}</td>
+                            <td>{% if song.leak_date and song.leak_date != "NaN" and song.leak_date != "nan" %}{{ song.leak_date }}{% else %}<em></em>{% endif %}</td>
                             <td>
                                 {% if song.notes %}
                                     <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#noteModal{{ song.id }}">
@@ -144,6 +159,15 @@
                                 {% endif %}
                             </td>
                         </tr>
+
+                        {% if song.needs_album_footer %}
+                            <!-- Album footer only for the last song in an album -->
+                            <tr class="table-primary">
+                                <td colspan="7" class="text-center fw-bold">
+                                    End of Album: {{ song.album_group_name }}
+                                </td>
+                            </tr>
+                        {% endif %}
                     {% empty %}
                         <tr>
                             <td colspan="7" class="text-center">No songs match your filters.</td>

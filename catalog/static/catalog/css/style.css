@@ -1,0 +1,34 @@
+/* Custom styling for the Carti Catalog */
+body {
+    background-color: #f8f9fa;
+}
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+.jumbotron {
+    background-color: #f8f9fa;
+    border: 1px solid rgba(0,0,0,.125);
+}
+
+/* Table styling */
+.table th {
+    font-weight: 600;
+}
+
+/* Card styling */
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: rgba(0,0,0,.03);
+    font-weight: 500;
+}
+
+/* Filter section styling */
+form label {
+    font-weight: 500;
+}

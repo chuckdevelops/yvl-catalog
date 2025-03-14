@@ -40,19 +40,30 @@ def index(request):
             song.emoji_tab_names = []
             song.other_tab_names = []
             
-            # Separate emoji and non-emoji tabs - specifically handle AI tracks
+            # Separate emoji and non-emoji tabs - handle all emoji tabs consistently
+            # Create a mapping of emoji to their respective tab names
+            emoji_tab_map = {
+                "🏆": "🏆 Grails",
+                "🥇": "🥇 Wanted",
+                "⭐": "⭐ Best Of",
+                "✨": "✨ Special",
+                "🗑️": "🗑️ Worst Of",
+                "🤖": "🤖 AI Tracks"
+            }
+            
             for tab in song.secondary_tab_names:
-                if tab == "🤖 AI Tracks":
-                    # Only add AI badge for songs that start with 🤖
-                    if song.name and song.name.startswith("🤖"):
-                        song.emoji_tab_names.append(tab)
-                    # If song doesn't start with 🤖, don't add AI badge at all
-                    continue
+                # Check if this is an emoji tab
+                is_emoji_tab = False
+                for emoji, tab_name in emoji_tab_map.items():
+                    if tab == tab_name:
+                        # Only add emoji tab if song name starts with matching emoji
+                        if song.name and song.name.startswith(emoji):
+                            song.emoji_tab_names.append(tab)
+                        is_emoji_tab = True
+                        break
                 
-                # Handle other emoji tabs
-                if any(emoji in tab for emoji in ["🏆", "🥇", "⭐", "✨", "🗑️"]):
-                    song.emoji_tab_names.append(tab)
-                else:
+                # If not an emoji tab, add to other tabs
+                if not is_emoji_tab:
                     song.other_tab_names.append(tab)
         except Exception:
             song.secondary_tab_names = []
@@ -124,17 +135,28 @@ def song_list(request):
     if quality:
         songs = songs.filter(quality=quality)
     if sheet_tab_id:
-        # Handle special case for AI tab - only include songs with 🤖 prefix
+        # Handle emoji tabs consistently - only include songs with matching emoji prefix
         try:
             sheet_tab_id = int(sheet_tab_id)
             sheet_tab = SheetTab.objects.get(id=sheet_tab_id)
             
-            # If this is the AI tab, only include songs with 🤖 prefix
-            if sheet_tab.name == "🤖 AI Tracks":
-                # Look for songs with 🤖 prefix - this is the ONLY requirement for AI tracks
-                songs = songs.filter(name__startswith="🤖").distinct()
+            # Create a mapping of emoji tabs to their emoji prefixes
+            emoji_tab_map = {
+                "🏆 Grails": "🏆",
+                "🥇 Wanted": "🥇",
+                "⭐ Best Of": "⭐",
+                "✨ Special": "✨",
+                "🗑️ Worst Of": "🗑️",
+                "🤖 AI Tracks": "🤖"
+            }
+            
+            # Check if this is an emoji tab
+            if sheet_tab.name in emoji_tab_map:
+                # For any emoji tab, only include songs with matching emoji prefix
+                emoji_prefix = emoji_tab_map[sheet_tab.name]
+                songs = songs.filter(name__startswith=emoji_prefix).distinct()
             else:
-                # For all other tabs, use the normal query
+                # For non-emoji tabs, use the normal query
                 songs = songs.filter(
                     Q(metadata__sheet_tab_id=sheet_tab_id) | 
                     Q(categories__sheet_tab_id=sheet_tab_id)
@@ -177,19 +199,30 @@ def song_list(request):
             song.emoji_tab_names = []
             song.other_tab_names = []
             
-            # Separate emoji and non-emoji tabs - specifically handle AI tracks
+            # Separate emoji and non-emoji tabs - handle all emoji tabs consistently
+            # Create a mapping of emoji to their respective tab names
+            emoji_tab_map = {
+                "🏆": "🏆 Grails",
+                "🥇": "🥇 Wanted",
+                "⭐": "⭐ Best Of",
+                "✨": "✨ Special",
+                "🗑️": "🗑️ Worst Of",
+                "🤖": "🤖 AI Tracks"
+            }
+            
             for tab in song.secondary_tab_names:
-                if tab == "🤖 AI Tracks":
-                    # Only add AI badge for songs that start with 🤖
-                    if song.name and song.name.startswith("🤖"):
-                        song.emoji_tab_names.append(tab)
-                    # If song doesn't start with 🤖, don't add AI badge at all
-                    continue
+                # Check if this is an emoji tab
+                is_emoji_tab = False
+                for emoji, tab_name in emoji_tab_map.items():
+                    if tab == tab_name:
+                        # Only add emoji tab if song name starts with matching emoji
+                        if song.name and song.name.startswith(emoji):
+                            song.emoji_tab_names.append(tab)
+                        is_emoji_tab = True
+                        break
                 
-                # Handle other emoji tabs
-                if any(emoji in tab for emoji in ["🏆", "🥇", "⭐", "✨", "🗑️"]):
-                    song.emoji_tab_names.append(tab)
-                else:
+                # If not an emoji tab, add to other tabs
+                if not is_emoji_tab:
                     song.other_tab_names.append(tab)
         except Exception as e:
             print(f"ERROR processing {song.name}: {str(e)}")
@@ -376,19 +409,30 @@ def song_detail(request, song_id):
         song.emoji_tab_names = []
         song.other_tab_names = []
         
-        # Separate emoji and non-emoji tabs - specifically handle AI tracks
+        # Separate emoji and non-emoji tabs - handle all emoji tabs consistently
+        # Create a mapping of emoji to their respective tab names
+        emoji_tab_map = {
+            "🏆": "🏆 Grails",
+            "🥇": "🥇 Wanted",
+            "⭐": "⭐ Best Of",
+            "✨": "✨ Special",
+            "🗑️": "🗑️ Worst Of",
+            "🤖": "🤖 AI Tracks"
+        }
+        
         for tab in song.secondary_tab_names:
-            if tab == "🤖 AI Tracks":
-                # Only add AI badge for songs that start with 🤖
-                if song.name and song.name.startswith("🤖"):
-                    song.emoji_tab_names.append(tab)
-                # If song doesn't start with 🤖, don't add AI badge at all
-                continue
+            # Check if this is an emoji tab
+            is_emoji_tab = False
+            for emoji, tab_name in emoji_tab_map.items():
+                if tab == tab_name:
+                    # Only add emoji tab if song name starts with matching emoji
+                    if song.name and song.name.startswith(emoji):
+                        song.emoji_tab_names.append(tab)
+                    is_emoji_tab = True
+                    break
             
-            # Handle other emoji tabs
-            if any(emoji in tab for emoji in ["🏆", "🥇", "⭐", "✨", "🗑️"]):
-                song.emoji_tab_names.append(tab)
-            else:
+            # If not an emoji tab, add to other tabs
+            if not is_emoji_tab:
                 song.other_tab_names.append(tab)
     except Exception:
         song.secondary_tab_names = []
