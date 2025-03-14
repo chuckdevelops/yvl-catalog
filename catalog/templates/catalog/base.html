@@ -21,6 +21,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'catalog:song_list' %}">Songs</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'catalog:media' %}">Media</a>
+                    </li>
                 </ul>
                 <form class="d-flex" action="{% url 'catalog:song_list' %}" method="get">
                     <input class="form-control me-2" type="search" name="q" placeholder="Search songs...">

@@ -1,0 +1,70 @@
+{% extends 'catalog/base.html' %}
+{% load catalog_filters %}
+
+{% block title %}Playboi Carti Media{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <h1 class="mb-4">Playboi Carti Media</h1>
+        
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Filters</h3>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'catalog:media' %}" class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="type-filter" class="form-label">Media Type</label>
+                            <select name="type" id="type-filter" class="form-select">
+                                <option value="">All Types</option>
+                                {% for type in media_types %}
+                                    <option value="{{ type }}" {% if type == type_filter %}selected{% endif %}>
+                                        {{ type|title|replace:'_,' ' ' }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <button type="submit" class="btn btn-primary">Filter</button>
+                        {% if type_filter %}
+                            <a href="{% url 'catalog:media' %}" class="btn btn-outline-secondary">Clear Filters</a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Media Grid -->
+        <div class="row">
+            {% for item in media_items %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <img src="{{ item.thumbnail }}" class="card-img-top" alt="{{ item.title }}">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ item.title }}</h5>
+                            <p class="card-text">{{ item.description }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-primary">{{ item.type|title|replace:'_,' ' ' }}</span>
+                                <small class="text-muted">{{ item.release_date }}</small>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <a href="{{ item.url }}" class="btn btn-sm btn-outline-primary" target="_blank">Watch</a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        No media items found. Try changing your filters.
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

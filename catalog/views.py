@@ -18,7 +18,6 @@ def index(request):
     """Home page with stats and recent songs"""
     song_count = CartiCatalog.objects.count()
     era_count = CartiCatalog.objects.values('era').distinct().count()
-    sheet_tab_count = SheetTab.objects.count()
     
     # Get recent songs with tab information
     recent_songs = CartiCatalog.objects.select_related('metadata__sheet_tab').prefetch_related('categories__sheet_tab').all().order_by('-id')[:10]
@@ -113,7 +112,6 @@ def index(request):
     context = {
         'song_count': song_count,
         'era_count': era_count,
-        'sheet_tab_count': sheet_tab_count,
         'recent_songs': recent_songs,
         'popular_tabs': popular_tabs,
     }
@@ -434,6 +432,85 @@ def song_list(request):
         'query': query,
     }
     return render(request, 'catalog/song_list.html', context)
+
+def media_page(request):
+    """Media page with music videos, interviews, and performances"""
+    # Get filter parameter
+    media_type = request.GET.get('type', '')
+    
+    # Define media items - each has a type, title, url, thumbnail, and description
+    media_items = [
+        {
+            'type': 'music_video',
+            'title': 'Magnolia',
+            'url': 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
+            'thumbnail': 'https://i.ytimg.com/vi/oHg5SJYRHA0/hqdefault.jpg',
+            'release_date': '2017-06-13',
+            'description': 'Official music video for "Magnolia" from the self-titled album.'
+        },
+        {
+            'type': 'music_video',
+            'title': 'Shoota (ft. Lil Uzi Vert)',
+            'url': 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
+            'thumbnail': 'https://i.ytimg.com/vi/oHg5SJYRHA0/hqdefault.jpg',
+            'release_date': '2018-07-25',
+            'description': 'Official music video for "Shoota" featuring Lil Uzi Vert from the Die Lit album.'
+        },
+        {
+            'type': 'music_video',
+            'title': '@MEH',
+            'url': 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
+            'thumbnail': 'https://i.ytimg.com/vi/oHg5SJYRHA0/hqdefault.jpg',
+            'release_date': '2020-04-16',
+            'description': 'Official music video for "@MEH".'
+        },
+        {
+            'type': 'interview',
+            'title': 'Playboi Carti Interview with Complex',
+            'url': 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
+            'thumbnail': 'https://i.ytimg.com/vi/oHg5SJYRHA0/hqdefault.jpg',
+            'release_date': '2019-06-12',
+            'description': 'Carti discusses the success of Die Lit and plans for Whole Lotta Red.'
+        },
+        {
+            'type': 'interview',
+            'title': 'Playboi Carti & A$AP Rocky Interview',
+            'url': 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
+            'thumbnail': 'https://i.ytimg.com/vi/oHg5SJYRHA0/hqdefault.jpg',
+            'release_date': '2018-03-05',
+            'description': 'Carti and Rocky discuss their influences and collaborative work.'
+        },
+        {
+            'type': 'performance',
+            'title': 'Coachella 2019 Performance',
+            'url': 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
+            'thumbnail': 'https://i.ytimg.com/vi/oHg5SJYRHA0/hqdefault.jpg',
+            'release_date': '2019-04-16',
+            'description': 'Full performance from Coachella 2019 featuring guest appearances.'
+        },
+        {
+            'type': 'performance',
+            'title': 'Rolling Loud Miami 2018',
+            'url': 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
+            'thumbnail': 'https://i.ytimg.com/vi/oHg5SJYRHA0/hqdefault.jpg',
+            'release_date': '2018-05-11',
+            'description': 'Carti performs hits from Die Lit at Rolling Loud Miami.'
+        }
+    ]
+    
+    # Apply type filter if specified
+    if media_type:
+        media_items = [item for item in media_items if item['type'] == media_type]
+    
+    # Get distinct media types for filter
+    media_types = list(set(item['type'] for item in media_items))
+    
+    context = {
+        'media_items': media_items,
+        'media_types': media_types,
+        'type_filter': media_type
+    }
+    return render(request, 'catalog/media.html', context)
 
 def song_detail(request, song_id):
     """Display detailed information about a specific song"""
