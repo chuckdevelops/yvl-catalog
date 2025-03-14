@@ -119,58 +119,6 @@
                 </div>
                 
                 <div class="col-md-4">
-                    <!-- Album Tracklist (if applicable) -->
-                    {% if album_related_songs %}
-                    <div class="card mb-4">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0">{{ song.display_album_name }} Tracklist</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="list-group">
-                                {% for album_song in album_related_songs %}
-                                    {% if album_song.is_placeholder %}
-                                    <div class="list-group-item list-group-item-action disabled d-flex justify-content-between align-items-center">
-                                        <span class="text-muted"><em>{{ album_song.name }}</em></span>
-                                        <span class="badge bg-secondary text-white">Track #{{ album_song.display_track_number }}</span>
-                                    </div>
-                                    {% else %}
-                                    <a href="{% url 'catalog:song_detail' song_id=album_song.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                                        <span>{{ album_song.name }}</span>
-                                        {% if album_song.display_track_number %}
-                                        <span class="badge bg-warning text-dark">Track #{{ album_song.display_track_number }}</span>
-                                        {% endif %}
-                                    </a>
-                                    {% endif %}
-                                {% endfor %}
-                                <!-- Add current song to tracklist too -->
-                                <div class="list-group-item list-group-item-action active d-flex justify-content-between align-items-center">
-                                    <span>{{ song.name }}</span>
-                                    {% if song.display_track_number %}
-                                    <span class="badge bg-light text-dark">Track #{{ song.display_track_number }}</span>
-                                    {% endif %}
-                                </div>
-                                
-                                <!-- Blue banner footer for album end -->
-                                <div class="list-group-item bg-primary text-white text-center">
-                                    <strong>End of Album</strong>
-                                </div>
-                                
-                                <!-- Display any version variants after the album section -->
-                                {% if song.version_variants %}
-                                    <div class="list-group-item list-group-item-secondary text-center">
-                                        <strong>Version Variants</strong>
-                                    </div>
-                                    {% for variant in song.version_variants %}
-                                        <a href="{% url 'catalog:song_detail' song_id=variant.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                                            <span>{{ variant.name }}</span>
-                                        </a>
-                                    {% endfor %}
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
-
                     <!-- Similar Songs -->
                     <div class="card">
                         <div class="card-header">

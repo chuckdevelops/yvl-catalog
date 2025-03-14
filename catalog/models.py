@@ -159,6 +159,142 @@ class CartiCatalog(models.Model):
         return f"{self.name} ({self.era or 'Unknown Era'})"
         
     @property
+    def producer(self):
+        """Extract producer name(s) from song name if available"""
+        if not self.name:
+            return None
+            
+        import re
+        # Look for patterns like "(prod. Producer Name)" or "(prod by Producer Name)"
+        prod_patterns = [
+            r'\(prod(?:\.|\s+by)?\s+([\w\s\'\.&+,]+?)(?:\)|$)',
+            r'\(produced\s+by\s+([\w\s\'\.&+,]+?)(?:\)|$)', 
+        ]
+        
+        # Function to clean and split producers
+        def clean_producers(producer_text):
+            if not producer_text:
+                return []
+            # Clean up any trailing characters and split by common separators
+            producer_text = re.sub(r'[\)\+]$', '', producer_text).strip()
+            # Split on common separators between multiple producers
+            producers = re.split(r'\s*(?:&|and|\+|,|\+|x|×)\s*', producer_text)
+            return [p.strip() for p in producers if p.strip()]
+        
+        # Check song name first
+        for pattern in prod_patterns:
+            match = re.search(pattern, self.name, re.IGNORECASE)
+            if match:
+                producer_text = match.group(1).strip()
+                return clean_producers(producer_text)
+                
+        # Check notes field as well
+        if self.notes:
+            for pattern in prod_patterns:
+                match = re.search(pattern, self.notes, re.IGNORECASE)
+                if match:
+                    producer_text = match.group(1).strip()
+                    return clean_producers(producer_text)
+            
+            # Check for explicit producer mention in notes
+            producer_notes_patterns = [
+                r'[Pp]roducer(?:s)?:\s+([\w\s\'\.&+,]+?)(?:\.|$)',
+                r'[Pp]roduced\s+by\s+([\w\s\'\.&+,]+?)(?:\.|$)'
+            ]
+            
+            for pattern in producer_notes_patterns:
+                match = re.search(pattern, self.notes)
+                if match:
+                    producer_text = match.group(1).strip()
+                    return clean_producers(producer_text)
+        
+        return None
+        
+    @property
+    def featuring(self):
+        """Extract featured artists from song name"""
+        if not self.name:
+            return None
+            
+        import re
+        # Function to clean and split featured artists
+        def clean_features(feature_text):
+            if not feature_text:
+                return []
+            # Clean up any trailing characters and split by common separators
+            feature_text = re.sub(r'[\)\+]$', '', feature_text).strip()
+            # Split on common separators between multiple features
+            features = re.split(r'\s*(?:&|and|\+|,|\+|x|×)\s*', feature_text)
+            return [f.strip() for f in features if f.strip()]
+            
+        # Pattern 1: Songs where Playboi Carti is featured 
+        # Format: "Artist - Song (feat. Playboi Carti)" or similar
+        carti_feature_patterns = [
+            r'(?:.*?)\s+-\s+(?:.*?)\s+(?:\[.*?\])?\s*\((?:ft\.|feat\.|featuring)\s+(.*?)\)', 
+            r'(?:.*?)\s+(?:\[.*?\])?\s*\((?:ft\.|feat\.|featuring)\s+(.*?)\)'
+        ]
+        
+        for pattern in carti_feature_patterns:
+            match = re.search(pattern, self.name, re.IGNORECASE)
+            if match:
+                feature_text = match.group(1).strip()
+                features = clean_features(feature_text)
+                # Check if "Playboi Carti" is among the features
+                for feature in features:
+                    if "playboi carti" in feature.lower():
+                        # This is a song where Carti is featured
+                        # Return the main artist (first part before the hyphen if present)
+                        main_artist_match = re.match(r'(.*?)\s+-\s+', self.name)
+                        if main_artist_match:
+                            return {'type': 'carti_featured', 'artist': main_artist_match.group(1).strip()}
+                        return {'type': 'carti_featured', 'artist': None}
+        
+        # Pattern 2: Songs by Playboi Carti featuring other artists
+        # Format: "Song Name (feat. Other Artist)" or similar
+        artist_feature_patterns = [
+            r'\((?:ft\.|feat\.|featuring)\s+(.*?)\)',
+            r'(?:ft\.|feat\.|featuring)\s+(.*?)(?:\(|$)',
+        ]
+        
+        for pattern in artist_feature_patterns:
+            match = re.search(pattern, self.name, re.IGNORECASE)
+            if match:
+                feature_text = match.group(1).strip()
+                features = clean_features(feature_text)
+                # Filter out any "Playboi Carti" from features
+                features = [f for f in features if "playboi carti" not in f.lower()]
+                if features:
+                    return {'type': 'features_others', 'artists': features}
+        
+        # Check notes field as well
+        if self.notes:
+            for pattern in artist_feature_patterns:
+                match = re.search(pattern, self.notes, re.IGNORECASE)
+                if match:
+                    feature_text = match.group(1).strip()
+                    features = clean_features(feature_text)
+                    # Filter out any "Playboi Carti" from features
+                    features = [f for f in features if "playboi carti" not in f.lower()]
+                    if features:
+                        return {'type': 'features_others', 'artists': features}
+            
+            # Check for explicit feature mention in notes
+            feature_notes_patterns = [
+                r'[Ff]eaturing(?:s)?:\s+([\w\s\'\.&+,]+?)(?:\.|$)',
+                r'[Ff]eatures\s+([\w\s\'\.&+,]+?)(?:\.|$)'
+            ]
+            
+            for pattern in feature_notes_patterns:
+                match = re.search(pattern, self.notes)
+                if match:
+                    feature_text = match.group(1).strip()
+                    features = clean_features(feature_text)
+                    if features:
+                        return {'type': 'features_others', 'artists': features}
+        
+        return None
+        
+    @property
     def sheet_tab(self):
         """Get the primary sheet tab from the metadata (Released or Unreleased)"""
         try:

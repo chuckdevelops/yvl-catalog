@@ -3,6 +3,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.db import models
 from django.template.defaulttags import register
+import re
 from .models import CartiCatalog, SheetTab, SongMetadata
 
 # Add template filter to get items from a list by index
@@ -125,6 +126,8 @@ def song_list(request):
     quality = request.GET.get('quality', '')
     sheet_tab_id = request.GET.get('sheet_tab', '')
     query = request.GET.get('q', '')
+    producer = request.GET.get('producer', '')
+    type_filter = request.GET.get('type', '')
     
     # Start with all songs - use select_related to optimize queries for metadata
     songs = CartiCatalog.objects.select_related('metadata__sheet_tab').prefetch_related('categories__sheet_tab').all()
@@ -134,6 +137,22 @@ def song_list(request):
         songs = songs.filter(era=era)
     if quality:
         songs = songs.filter(quality=quality)
+    if type_filter:
+        songs = songs.filter(type=type_filter)
+    if producer:
+        # Producer filter works on song name or notes fields
+        # Using a more general approach to find the producer name anywhere in the production credits
+        songs = songs.filter(
+            Q(name__iregex=r'prod(?:\.|\s+by)?\s+.*?\b' + producer + r'\b') |
+            Q(name__iregex=r'produced\s+by\s+.*?\b' + producer + r'\b') |
+            Q(notes__iregex=r'prod(?:\.|\s+by)?\s+.*?\b' + producer + r'\b') |
+            Q(notes__iregex=r'produced\s+by\s+.*?\b' + producer + r'\b') |
+            # Also check for cases where the producer is explicitly mentioned
+            Q(name__icontains=producer) |
+            Q(notes__icontains=f"producer: {producer}") |
+            Q(notes__icontains=f"produced by {producer}")
+        )
+        
     if sheet_tab_id:
         # Handle emoji tabs consistently - only include songs with matching emoji prefix
         try:
@@ -210,7 +229,20 @@ def song_list(request):
                 "🤖": "🤖 AI Tracks"
             }
             
+            # Get the current filtered tab (if any)
+            current_filtered_tab_name = None
+            if sheet_tab_id:
+                try:
+                    current_filtered_tab = SheetTab.objects.get(id=sheet_tab_id)
+                    current_filtered_tab_name = current_filtered_tab.name
+                except SheetTab.DoesNotExist:
+                    pass
+            
             for tab in song.secondary_tab_names:
+                # Skip adding this tab if we're already filtering by it
+                if tab == current_filtered_tab_name:
+                    continue
+                    
                 # Check if this is an emoji tab
                 is_emoji_tab = False
                 for emoji, tab_name in emoji_tab_map.items():
@@ -342,6 +374,10 @@ def song_list(request):
     eras = [era['era'] for era in era_counts if era['era']]  # Only include non-empty eras
     
     qualities = CartiCatalog.objects.values_list('quality', flat=True).distinct().order_by('quality')
+    
+    # Get unique type values for filter
+    types = CartiCatalog.objects.values_list('type', flat=True).distinct().order_by('type')
+    types = [t for t in types if t and t not in ["NaN", "nan"]]  # Filter out None and NaN values
     # Custom ordering for specific tabs
     tab_order_map = {
         'Released': 1,
@@ -364,14 +400,37 @@ def song_list(request):
         key=lambda tab: (tab_order_map.get(tab.name, 999), tab.name)
     )
     
+    # Get top producers
+    top_producers = [
+        "Pi'erre Bourne",
+        "Ethereal",
+        "MexikoDro",
+        "Art Dealer",
+        "Richie Souf",
+        "F1lthy",
+        "Metro Boomin",
+        "ICYTWAT",
+        "StarBoy",
+        "Southside",
+        "Maaly Raw",
+        "Juberlee",
+        "TM88",
+        "Cardo",
+        "DP Beats"
+    ]
+    
     context = {
         'page_obj': page_obj,
         'eras': eras,
         'qualities': qualities,
+        'types': types,
         'sheet_tabs': sheet_tabs,
+        'top_producers': top_producers,
         'era_filter': era,
         'quality_filter': quality,
+        'type_filter': type_filter,
         'sheet_tab_filter': sheet_tab_id,
+        'producer_filter': producer,
         'query': query,
     }
     return render(request, 'catalog/song_list.html', context)
@@ -420,7 +479,16 @@ def song_detail(request, song_id):
             "🤖": "🤖 AI Tracks"
         }
         
+        # Track processed tabs to avoid duplicates
+        processed_tabs = set()
+        
         for tab in song.secondary_tab_names:
+            # Skip if we already processed this tab
+            if tab in processed_tabs:
+                continue
+                
+            processed_tabs.add(tab)
+            
             # Check if this is an emoji tab
             is_emoji_tab = False
             for emoji, tab_name in emoji_tab_map.items():
