@@ -1,70 +1,98 @@
 {% extends 'catalog/base.html' %}
 {% load catalog_filters %}
 
-{% block title %}Playboi Carti Media{% endblock %}
+{% block title %}Playboi Carti Media Hub{% endblock %}
 
 {% block content %}
 <div class="row">
     <div class="col-lg-12">
-        <h1 class="mb-4">Playboi Carti Media</h1>
+        <h1 class="mb-4">Playboi Carti Media Hub</h1>
+        <p class="lead">Explore different types of Playboi Carti media content</p>
         
-        <!-- Filters -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h3>Filters</h3>
-            </div>
-            <div class="card-body">
-                <form method="get" action="{% url 'catalog:media' %}" class="row">
-                    <div class="col-md-4">
-                        <div class="mb-3">
-                            <label for="type-filter" class="form-label">Media Type</label>
-                            <select name="type" id="type-filter" class="form-select">
-                                <option value="">All Types</option>
-                                {% for type in media_types %}
-                                    <option value="{{ type }}" {% if type == type_filter %}selected{% endif %}>
-                                        {{ type|title|replace:'_,' ' ' }}
-                                    </option>
-                                {% endfor %}
-                            </select>
+        <!-- Media Categories -->
+        <div class="row">
+            <!-- Art Category -->
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-images fa-4x mb-3 text-primary"></i>
+                        <h2 class="card-title">Art</h2>
+                        <p class="card-text">Album covers, single art, and other visual artwork</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-primary">{{ art_count }} items</span>
                         </div>
                     </div>
-                    <div class="col-md-12">
-                        <button type="submit" class="btn btn-primary">Filter</button>
-                        {% if type_filter %}
-                            <a href="{% url 'catalog:media' %}" class="btn btn-outline-secondary">Clear Filters</a>
-                        {% endif %}
+                    <div class="card-footer text-center">
+                        <a href="{% url 'catalog:art' %}" class="btn btn-primary">View Art</a>
                     </div>
-                </form>
+                </div>
+            </div>
+            
+            <!-- Interviews Category -->
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-microphone-alt fa-4x mb-3 text-primary"></i>
+                        <h2 class="card-title">Interviews</h2>
+                        <p class="card-text">Magazine, online, and video interviews</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-primary">{{ interviews_count }} items</span>
+                        </div>
+                    </div>
+                    <div class="card-footer text-center">
+                        <a href="#" class="btn btn-primary disabled">Coming Soon</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Fit Pics Category -->
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-tshirt fa-4x mb-3 text-primary"></i>
+                        <h2 class="card-title">Fit Pics</h2>
+                        <p class="card-text">Fashion photos and outfit inspirations</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-primary">{{ fit_pics_count }} items</span>
+                        </div>
+                    </div>
+                    <div class="card-footer text-center">
+                        <a href="#" class="btn btn-primary disabled">Coming Soon</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Social Media Category -->
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-hashtag fa-4x mb-3 text-primary"></i>
+                        <h2 class="card-title">Social Media</h2>
+                        <p class="card-text">Notable tweets, Instagram posts, and more</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-primary">{{ social_media_count }} items</span>
+                        </div>
+                    </div>
+                    <div class="card-footer text-center">
+                        <a href="#" class="btn btn-primary disabled">Coming Soon</a>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <!-- Media Grid -->
-        <div class="row">
-            {% for item in media_items %}
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100">
-                        <img src="{{ item.thumbnail }}" class="card-img-top" alt="{{ item.title }}">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ item.title }}</h5>
-                            <p class="card-text">{{ item.description }}</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="badge bg-primary">{{ item.type|title|replace:'_,' ' ' }}</span>
-                                <small class="text-muted">{{ item.release_date }}</small>
-                            </div>
-                        </div>
-                        <div class="card-footer">
-                            <a href="{{ item.url }}" class="btn btn-sm btn-outline-primary" target="_blank">Watch</a>
-                        </div>
-                    </div>
-                </div>
-            {% empty %}
-                <div class="col-12">
-                    <div class="alert alert-info">
-                        No media items found. Try changing your filters.
-                    </div>
-                </div>
-            {% endfor %}
+        <!-- Media Overview -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3>About the Media Section</h3>
+            </div>
+            <div class="card-body">
+                <p>The Media Hub provides access to various types of Playboi Carti content beyond just his music. Browse album artwork, interviews, fashion photos, and social media posts to get a complete picture of Carti's artistic expression.</p>
+                <p>Each category offers filtering options to help you find specific content by era, type, and more.</p>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- Font Awesome for icons -->
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 {% endblock %}

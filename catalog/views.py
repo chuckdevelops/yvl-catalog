@@ -434,83 +434,113 @@ def song_list(request):
     return render(request, 'catalog/song_list.html', context)
 
 def media_page(request):
-    """Media page with music videos, interviews, and performances"""
-    # Get filter parameter
-    media_type = request.GET.get('type', '')
+    """Media hub page with links to different media categories"""
+    # Get counts for each media type if we had models implemented
+    art_count = 0  # Replace with ArtMedia.objects.count() when implemented
+    interviews_count = 0
+    fit_pics_count = 0
+    social_media_count = 0
     
-    # Define media items - each has a type, title, url, thumbnail, and description
-    media_items = [
+    context = {
+        'art_count': art_count,
+        'interviews_count': interviews_count,
+        'fit_pics_count': fit_pics_count,
+        'social_media_count': social_media_count
+    }
+    return render(request, 'catalog/media.html', context)
+
+def art_page(request):
+    """Art page displaying album covers, single art, etc."""
+    # Get filter parameters
+    era_filter = request.GET.get('era', '')
+    type_filter = request.GET.get('type', '')
+    used_filter = request.GET.get('used', '')
+    query = request.GET.get('q', '')
+    
+    # Sample art data (placeholder until database is implemented)
+    art_items = [
         {
-            'type': 'music_video',
-            'title': 'Magnolia',
-            'url': 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
-            'thumbnail': 'https://i.ytimg.com/vi/oHg5SJYRHA0/hqdefault.jpg',
-            'release_date': '2017-06-13',
-            'description': 'Official music video for "Magnolia" from the self-titled album.'
+            'id': 1,
+            'name': 'TOO FLY KID',
+            'era': 'Aviation Class',
+            'notes': 'unknown purpose',
+            'image_url': 'https://placehold.co/400x400',
+            'media_type': 'Unknown',
+            'was_used': False,
+            'links': ''
         },
         {
-            'type': 'music_video',
-            'title': 'Shoota (ft. Lil Uzi Vert)',
-            'url': 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
-            'thumbnail': 'https://i.ytimg.com/vi/oHg5SJYRHA0/hqdefault.jpg',
-            'release_date': '2018-07-25',
-            'description': 'Official music video for "Shoota" featuring Lil Uzi Vert from the Die Lit album.'
+            'id': 2,
+            'name': 'Killing Me Softly',
+            'era': 'Killing Me Softly',
+            'notes': 'Coverart for Carti\'s 2010 or 2011 project "Killing Me Softly. The album uses the same image as it\'s cover as Nas\'s NASIR, even though the album was concieved 6 years before NASIR.',
+            'image_url': 'https://placehold.co/400x400',
+            'media_type': 'Album Cover',
+            'was_used': True,
+            'links': 'https://yungcarti.tumblr.com/image/4992098042'
         },
         {
-            'type': 'music_video',
-            'title': '@MEH',
-            'url': 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
-            'thumbnail': 'https://i.ytimg.com/vi/oHg5SJYRHA0/hqdefault.jpg',
-            'release_date': '2020-04-16',
-            'description': 'Official music video for "@MEH".'
+            'id': 3,
+            'name': 'The High Chronicals',
+            'era': 'THC: The High Chronicals',
+            'notes': 'The art for Playboi Carti\'s (then known as $ir Cartier) mixtape "The High Chronicals"',
+            'image_url': 'https://placehold.co/400x400',
+            'media_type': 'Album Cover',
+            'was_used': True,
+            'links': 'https://imgur.com/6q1dUzi'
         },
         {
-            'type': 'interview',
-            'title': 'Playboi Carti Interview with Complex',
-            'url': 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
-            'thumbnail': 'https://i.ytimg.com/vi/oHg5SJYRHA0/hqdefault.jpg',
-            'release_date': '2019-06-12',
-            'description': 'Carti discusses the success of Die Lit and plans for Whole Lotta Red.'
+            'id': 4,
+            'name': 'Living Reckless',
+            'era': 'THC: The High Chronicals',
+            'notes': 'Cover of Living Reckless',
+            'image_url': 'https://placehold.co/400x400',
+            'media_type': 'Single Art',
+            'was_used': True,
+            'links': ''
         },
         {
-            'type': 'interview',
-            'title': 'Playboi Carti & A$AP Rocky Interview',
-            'url': 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
-            'thumbnail': 'https://i.ytimg.com/vi/oHg5SJYRHA0/hqdefault.jpg',
-            'release_date': '2018-03-05',
-            'description': 'Carti and Rocky discuss their influences and collaborative work.'
-        },
-        {
-            'type': 'performance',
-            'title': 'Coachella 2019 Performance',
-            'url': 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
-            'thumbnail': 'https://i.ytimg.com/vi/oHg5SJYRHA0/hqdefault.jpg',
-            'release_date': '2019-04-16',
-            'description': 'Full performance from Coachella 2019 featuring guest appearances.'
-        },
-        {
-            'type': 'performance',
-            'title': 'Rolling Loud Miami 2018',
-            'url': 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
-            'thumbnail': 'https://i.ytimg.com/vi/oHg5SJYRHA0/hqdefault.jpg',
-            'release_date': '2018-05-11',
-            'description': 'Carti performs hits from Die Lit at Rolling Loud Miami.'
+            'id': 5,
+            'name': 'Carolina Blue [OG Cover]',
+            'era': 'THC: The High Chronicals',
+            'notes': 'Carolina Blue\'s OG Cover without any edits, found in Carti\'s Tumblr.',
+            'image_url': 'https://placehold.co/400x400',
+            'media_type': 'Single Art',
+            'was_used': False,
+            'links': 'https://yungcarti.tumblr.com/post/16736117122'
         }
     ]
     
-    # Apply type filter if specified
-    if media_type:
-        media_items = [item for item in media_items if item['type'] == media_type]
+    # Apply filters
+    if era_filter:
+        art_items = [item for item in art_items if item['era'] == era_filter]
+    if type_filter:
+        art_items = [item for item in art_items if item['media_type'] == type_filter]
+    if used_filter:
+        was_used = used_filter == 'used'
+        art_items = [item for item in art_items if item['was_used'] == was_used]
+    if query:
+        art_items = [item for item in art_items if query.lower() in item['name'].lower() or (item['notes'] and query.lower() in item['notes'].lower())]
     
-    # Get distinct media types for filter
-    media_types = list(set(item['type'] for item in media_items))
+    # Get filter options
+    eras = sorted(list(set(item['era'] for item in art_items if item['era'])))
+    media_types = sorted(list(set(item['media_type'] for item in art_items if item['media_type'])))
+    
+    # Pagination
+    paginator = Paginator(art_items, 12)  # Show 12 items per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     
     context = {
-        'media_items': media_items,
+        'page_obj': page_obj,
+        'eras': eras,
         'media_types': media_types,
-        'type_filter': media_type
+        'era_filter': era_filter,
+        'type_filter': type_filter,
+        'used_filter': used_filter,
+        'query': query
     }
-    return render(request, 'catalog/media.html', context)
+    return render(request, 'catalog/art.html', context)
 
 def song_detail(request, song_id):
     """Display detailed information about a specific song"""

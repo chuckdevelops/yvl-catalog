@@ -530,3 +530,23 @@ class CartiCatalog(models.Model):
                 return era_album_map[self.era]
                 
         return None
+        
+class ArtMedia(models.Model):
+    """Model for Art media items."""
+    name = models.CharField(max_length=255)
+    era = models.CharField(max_length=100, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    image_url = models.URLField(blank=True, null=True)
+    media_type = models.CharField(max_length=100, blank=True, null=True)
+    was_used = models.BooleanField(default=False)
+    links = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        managed = True
+        db_table = 'art_media'
+        verbose_name = 'Art Media'
+        verbose_name_plural = 'Art Media'
+        ordering = ['era', 'name']
+    
+    def __str__(self):
+        return self.name
