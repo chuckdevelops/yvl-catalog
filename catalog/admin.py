@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CartiCatalog, SheetTab, SongMetadata
+from .models import CartiCatalog, SheetTab, SongMetadata, SongCategory, ArtMedia
 
 class SongMetadataInline(admin.StackedInline):
     model = SongMetadata
@@ -34,3 +34,23 @@ class CartiCatalogAdmin(admin.ModelAdmin):
     def get_subsection(self, obj):
         return obj.subsection
     get_subsection.short_description = 'Subsection'
+    
+@admin.register(ArtMedia)
+class ArtMediaAdmin(admin.ModelAdmin):
+    list_display = ('name', 'era', 'media_type', 'was_used')
+    list_filter = ('era', 'media_type', 'was_used')
+    search_fields = ('name', 'notes')
+    ordering = ('era', 'name')
+    
+    # Add fieldsets to make editing more organized
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'era', 'media_type')
+        }),
+        ('Image Information', {
+            'fields': ('image_url', 'was_used')
+        }),
+        ('Additional Information', {
+            'fields': ('notes', 'links')
+        })
+    )

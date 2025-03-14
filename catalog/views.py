@@ -435,11 +435,12 @@ def song_list(request):
 
 def media_page(request):
     """Media hub page with links to different media categories"""
-    # Get counts for each media type if we had models implemented
-    art_count = 0  # Replace with ArtMedia.objects.count() when implemented
-    interviews_count = 0
-    fit_pics_count = 0
-    social_media_count = 0
+    # Get counts for each media type
+    from .models import ArtMedia
+    art_count = ArtMedia.objects.count()
+    interviews_count = 0  # Implement this when the model is created
+    fit_pics_count = 0    # Implement this when the model is created
+    social_media_count = 0 # Implement this when the model is created
     
     context = {
         'art_count': art_count,
@@ -457,74 +458,66 @@ def art_page(request):
     used_filter = request.GET.get('used', '')
     query = request.GET.get('q', '')
     
-    # Sample art data (placeholder until database is implemented)
-    art_items = [
-        {
-            'id': 1,
-            'name': 'TOO FLY KID',
-            'era': 'Aviation Class',
-            'notes': 'unknown purpose',
-            'image_url': 'https://placehold.co/400x400',
-            'media_type': 'Unknown',
-            'was_used': False,
-            'links': ''
-        },
-        {
-            'id': 2,
-            'name': 'Killing Me Softly',
-            'era': 'Killing Me Softly',
-            'notes': 'Coverart for Carti\'s 2010 or 2011 project "Killing Me Softly. The album uses the same image as it\'s cover as Nas\'s NASIR, even though the album was concieved 6 years before NASIR.',
-            'image_url': 'https://placehold.co/400x400',
-            'media_type': 'Album Cover',
-            'was_used': True,
-            'links': 'https://yungcarti.tumblr.com/image/4992098042'
-        },
-        {
-            'id': 3,
-            'name': 'The High Chronicals',
-            'era': 'THC: The High Chronicals',
-            'notes': 'The art for Playboi Carti\'s (then known as $ir Cartier) mixtape "The High Chronicals"',
-            'image_url': 'https://placehold.co/400x400',
-            'media_type': 'Album Cover',
-            'was_used': True,
-            'links': 'https://imgur.com/6q1dUzi'
-        },
-        {
-            'id': 4,
-            'name': 'Living Reckless',
-            'era': 'THC: The High Chronicals',
-            'notes': 'Cover of Living Reckless',
-            'image_url': 'https://placehold.co/400x400',
-            'media_type': 'Single Art',
-            'was_used': True,
-            'links': ''
-        },
-        {
-            'id': 5,
-            'name': 'Carolina Blue [OG Cover]',
-            'era': 'THC: The High Chronicals',
-            'notes': 'Carolina Blue\'s OG Cover without any edits, found in Carti\'s Tumblr.',
-            'image_url': 'https://placehold.co/400x400',
-            'media_type': 'Single Art',
-            'was_used': False,
-            'links': 'https://yungcarti.tumblr.com/post/16736117122'
-        }
-    ]
+    # Get data from the database
+    from .models import ArtMedia
+    art_items = ArtMedia.objects.all()
     
     # Apply filters
     if era_filter:
-        art_items = [item for item in art_items if item['era'] == era_filter]
+        art_items = art_items.filter(era=era_filter)
     if type_filter:
-        art_items = [item for item in art_items if item['media_type'] == type_filter]
+        art_items = art_items.filter(media_type=type_filter)
     if used_filter:
         was_used = used_filter == 'used'
-        art_items = [item for item in art_items if item['was_used'] == was_used]
+        art_items = art_items.filter(was_used=was_used)
     if query:
-        art_items = [item for item in art_items if query.lower() in item['name'].lower() or (item['notes'] and query.lower() in item['notes'].lower())]
+        art_items = art_items.filter(
+            models.Q(name__icontains=query) | models.Q(notes__icontains=query)
+        )
     
-    # Get filter options
-    eras = sorted(list(set(item['era'] for item in art_items if item['era'])))
-    media_types = sorted(list(set(item['media_type'] for item in art_items if item['media_type'])))
+    # Get filter options from the database
+    eras = ArtMedia.objects.values_list('era', flat=True).distinct().order_by('era')
+    eras = [era for era in eras if era]  # Filter out None or empty values
+    
+    media_types = ArtMedia.objects.values_list('media_type', flat=True).distinct().order_by('media_type')
+    media_types = [mt for mt in media_types if mt]  # Filter out None or empty values
+    
+    # If database is empty, provide sample data
+    if not art_items.exists():
+        # Create some sample placeholder items for initial display
+        placeholders = [
+            {
+                'id': 1,
+                'name': 'Album Cover Example',
+                'era': 'Sample Era',
+                'notes': 'This is a placeholder item since no art media has been imported yet.',
+                'image_url': 'https://placehold.co/400x400',
+                'media_type': 'Album Cover',
+                'was_used': True,
+                'links': ''
+            },
+            {
+                'id': 2,
+                'name': 'Single Art Example',
+                'era': 'Sample Era',
+                'notes': 'Run the import_art_media management command to import actual art data.',
+                'image_url': 'https://placehold.co/400x400',
+                'media_type': 'Single Art',
+                'was_used': False,
+                'links': ''
+            }
+        ]
+        
+        from django.forms.models import model_to_dict
+        # Convert raw dicts to a structure similar to model instances for template compatibility
+        class PlaceholderObj:
+            def __init__(self, data):
+                for key, value in data.items():
+                    setattr(self, key, value)
+        
+        art_items = [PlaceholderObj(item) for item in placeholders]
+        eras = ["Sample Era"]
+        media_types = ["Album Cover", "Single Art"]
     
     # Pagination
     paginator = Paginator(art_items, 12)  # Show 12 items per page
