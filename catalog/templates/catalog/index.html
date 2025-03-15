@@ -38,7 +38,7 @@
     <div class="col-lg-4">
         <div class="card">
             <div class="card-header">
-                <h3>Recent Songs</h3>
+                <h3>Recently Leaked</h3>
             </div>
             <div class="card-body">
                 <div class="list-group">
@@ -102,9 +102,7 @@
                                     <td>
                                         {% if song.sheet_tab_name and song.sheet_tab_name != "Unknown" %}
                                             {{ song.sheet_tab_name }}
-                                            {% if song.subsection_name %}
-                                                <small class="text-muted">({{ song.subsection_name }})</small>
-                                            {% endif %}
+                                            <!-- Subsection name display removed -->
                                         {% else %}
                                             <em>Unknown</em>
                                         {% endif %}

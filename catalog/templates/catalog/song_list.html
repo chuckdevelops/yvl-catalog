@@ -105,21 +105,12 @@
                 </thead>
                 <tbody>
                     {% for song in page_obj %}
-                        {% if song.needs_album_header %}
-                            <!-- Album header only for the first song in an album -->
-                            <tr class="table-primary">
-                                <td colspan="7" class="text-center fw-bold">
-                                    Album: {{ song.album_group_name }}
-                                </td>
-                            </tr>
-                        {% endif %}
+                        <!-- Album headers removed -->
 
                         <tr>
                             <td>
                                 <a href="{% url 'catalog:song_detail' song_id=song.id %}">{{ song.name }}</a>
-                                {% if song.display_track_number %}
-                                    <span class="badge bg-warning text-dark">Track #{{ song.display_track_number }}</span>
-                                {% endif %}
+                                <!-- Track number badges removed -->
                             </td>
                             <td>{% if song.era %}{{ song.era }}{% else %}<em>Unknown</em>{% endif %}</td>
                             <td>
@@ -146,9 +137,8 @@
                                         </div>
                                     {% endif %}
                                     
-                                    {% if song.subsection_name %}
-                                        <small class="text-muted">({{ song.subsection_name }})</small>
-                                    {% endif %}
+                                    <!-- Subsection name display removed -->
+                                    
                                 {% else %}
                                     <em>Unknown</em>
                                 {% endif %}
@@ -182,14 +172,7 @@
                             </td>
                         </tr>
 
-                        {% if song.needs_album_footer %}
-                            <!-- Album footer only for the last song in an album -->
-                            <tr class="table-primary">
-                                <td colspan="7" class="text-center fw-bold">
-                                    End of Album: {{ song.album_group_name }}
-                                </td>
-                            </tr>
-                        {% endif %}
+                        <!-- Album footers removed -->
                     {% empty %}
                         <tr>
                             <td colspan="7" class="text-center">No songs match your filters.</td>

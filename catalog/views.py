@@ -16,11 +16,36 @@ def get_item(lst, index):
 
 def index(request):
     """Home page with stats and recent songs"""
-    song_count = CartiCatalog.objects.count()
+    # Count songs only once (even if they appear in multiple tabs)
+    song_count = CartiCatalog.objects.distinct().count()
     era_count = CartiCatalog.objects.values('era').distinct().count()
     
-    # Get recent songs with tab information
-    recent_songs = CartiCatalog.objects.select_related('metadata__sheet_tab').prefetch_related('categories__sheet_tab').all().order_by('-id')[:10]
+    # Get specific songs for the "Recently Leaked" section
+    # These are the exact songs to display in the order specified
+    specific_recent_songs = []
+    recent_song_queries = [
+        {'name': '🏆 Dancer', 'era': 'TMB Collab'},
+        {'name': '🏆 Paramount', 'era': 'Whole Lotta Red'},
+        {'name': 'DEMONSLURK', 'era': 'MUSIC'},
+        {'name': '⭐ Not Real', 'era': 'Whole Lotta Red'},
+        {'name': 'Cartier', 'era': 'Chucky Era'}
+    ]
+    
+    # Find each song by name and era
+    for query in recent_song_queries:
+        match = CartiCatalog.objects.filter(
+            Q(name__icontains=query['name']) & 
+            Q(era__icontains=query['era'])
+        ).first()
+        if match:
+            specific_recent_songs.append(match)
+    
+    # Fall back to most recent songs if we couldn't find the specific ones
+    if len(specific_recent_songs) < 5:
+        recent_songs = CartiCatalog.objects.select_related('metadata__sheet_tab').prefetch_related('categories__sheet_tab').all().order_by('-id')[:10]
+    else:
+        # Use our specific song list limited to 5 items
+        recent_songs = specific_recent_songs[:5]
     
     # Add sheet tab info to recent songs
     for song in recent_songs:
@@ -75,7 +100,7 @@ def index(request):
         song.all_tab_names = list(set(all_tab_names))  # Remove duplicates
     
     # Get popular tabs (count both primary and secondary assignments)
-    from django.db.models import Count, Q
+    # Note: Count is already imported at the top, no need to reimport
     
     primary_counts = SheetTab.objects.annotate(
         primary_count=Count('songs')
@@ -167,6 +192,9 @@ def song_list(request):
                 "🤖 AI Tracks": "🤖"
             }
             
+            # Check if the Stems tab is explicitly selected
+            stems_tab_selected = (sheet_tab.name == "Stems")
+            
             # Check if this is an emoji tab
             if sheet_tab.name in emoji_tab_map:
                 # For any emoji tab, only include songs with matching emoji prefix
@@ -184,6 +212,18 @@ def song_list(request):
                 Q(metadata__sheet_tab_id=sheet_tab_id) | 
                 Q(categories__sheet_tab_id=sheet_tab_id)
             ).distinct()
+    else:
+        # When no specific tab is selected, exclude songs from the Stems tab
+        try:
+            stems_tab = SheetTab.objects.filter(name="Stems").first()
+            if stems_tab:
+                songs = songs.exclude(
+                    Q(metadata__sheet_tab_id=stems_tab.id) & 
+                    ~Q(categories__sheet_tab__isnull=False)  # Only exclude if not in any other tab
+                ).distinct()
+        except Exception:
+            pass  # If there's an error, don't apply the exclusion
+            
     if query:
         songs = songs.filter(Q(name__icontains=query) | Q(notes__icontains=query))
     
