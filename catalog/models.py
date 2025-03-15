@@ -604,21 +604,27 @@ class FitPic(models.Model):
         db_table = 'fit_pic'
         verbose_name = 'Fit Pic'
         verbose_name_plural = 'Fit Pics'
-        ordering = ['era', 'release_date']
+        ordering = ['-id']  # Order by ID descending to show newest first
     
     def __str__(self):
         return f"{self.caption or 'Fit Pic'} ({self.era or 'Unknown Era'} - {self.release_date or 'Unknown Date'})"
     
     @property
     def thumbnail(self):
-        """Return the image URL or try to generate from Instagram link"""
+        """Return the image URL or a placeholder for Instagram links"""
         if self.image_url:
             return self.image_url
-        elif self.source_links and 'instagram.com' in self.source_links:
-            # For future implementation - could extract Instagram image
-            # Currently returning None as we'll need to scrape the images
-            return None
-        return None
+        elif self.source_links:
+            # Provide placeholders based on source type
+            if 'instagram.com' in self.source_links:
+                return 'https://placehold.co/400x400?text=Instagram+Post'
+            elif 'imgur.com' in self.source_links:
+                return 'https://placehold.co/400x400?text=Imgur+Image'
+            elif 'officemagazine.net' in self.source_links:
+                return 'https://placehold.co/400x400?text=Office+Magazine'
+        
+        # Default placeholder
+        return 'https://placehold.co/400x400?text=No+Image'
         
 class SocialMedia(models.Model):
     """Model for Playboi Carti social media accounts."""

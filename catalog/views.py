@@ -20,32 +20,47 @@ def index(request):
     song_count = CartiCatalog.objects.distinct().count()
     era_count = CartiCatalog.objects.values('era').distinct().count()
     
-    # Get specific songs for the "Recently Leaked" section
-    # These are the exact songs to display in the order specified
-    specific_recent_songs = []
-    recent_song_queries = [
-        {'name': '🏆 Dancer', 'era': 'TMB Collab'},
-        {'name': '🏆 Paramount', 'era': 'Whole Lotta Red'},
-        {'name': 'DEMONSLURK', 'era': 'MUSIC'},
-        {'name': '⭐ Not Real', 'era': 'Whole Lotta Red'},
-        {'name': 'Cartier', 'era': 'Chucky Era'}
-    ]
-    
-    # Find each song by name and era
-    for query in recent_song_queries:
-        match = CartiCatalog.objects.filter(
-            Q(name__icontains=query['name']) & 
-            Q(era__icontains=query['era'])
-        ).first()
-        if match:
-            specific_recent_songs.append(match)
-    
-    # Fall back to most recent songs if we couldn't find the specific ones
-    if len(specific_recent_songs) < 5:
-        recent_songs = CartiCatalog.objects.select_related('metadata__sheet_tab').prefetch_related('categories__sheet_tab').all().order_by('-id')[:10]
-    else:
-        # Use our specific song list limited to 5 items
-        recent_songs = specific_recent_songs[:5]
+    # Get the Recent tab first - we'll use it to get the latest songs
+    try:
+        recent_tab = SheetTab.objects.get(name="Recent")
+        # Get songs from the Recent tab, already sorted newest first by the management command
+        recent_songs = CartiCatalog.objects.select_related('metadata__sheet_tab')\
+            .prefetch_related('categories__sheet_tab')\
+            .filter(categories__sheet_tab=recent_tab)\
+            .distinct()[:10]
+    except SheetTab.DoesNotExist:
+        # Fallback: if Recent tab doesn't exist, just get newest songs by ID
+        recent_songs = CartiCatalog.objects.select_related('metadata__sheet_tab')\
+            .prefetch_related('categories__sheet_tab')\
+            .all().order_by('-id')[:10]
+            
+    # If no songs found, fall back to the hardcoded priority list
+    if not recent_songs.exists():
+        # These are specific songs to display in the order specified
+        specific_recent_songs = []
+        recent_song_queries = [
+            {'name': '🏆 Dancer', 'era': 'TMB Collab'},
+            {'name': '🏆 Paramount', 'era': 'Whole Lotta Red'},
+            {'name': 'DEMONSLURK', 'era': 'MUSIC'},
+            {'name': '⭐ Not Real', 'era': 'Whole Lotta Red'},
+            {'name': 'Cartier', 'era': 'Chucky Era'}
+        ]
+        
+        # Find each song by name and era
+        for query in recent_song_queries:
+            match = CartiCatalog.objects.filter(
+                Q(name__icontains=query['name']) & 
+                Q(era__icontains=query['era'])
+            ).first()
+            if match:
+                specific_recent_songs.append(match)
+        
+        # Use our specific song list or fall back to most recent by ID
+        if specific_recent_songs:
+            recent_songs = specific_recent_songs
+        else:
+            recent_songs = CartiCatalog.objects.select_related('metadata__sheet_tab')\
+                .prefetch_related('categories__sheet_tab').all().order_by('-id')[:10]
     
     # Add sheet tab info to recent songs
     for song in recent_songs:
@@ -227,12 +242,14 @@ def song_list(request):
     if query:
         songs = songs.filter(Q(name__icontains=query) | Q(notes__icontains=query))
     
-    # Track if we're filtering for the Released tab
+    # Track if we're filtering for the Released tab or Recent tab
     is_released_tab = False
+    is_recent_tab = False
     if sheet_tab_id:
         try:
             tab = SheetTab.objects.get(id=sheet_tab_id)
             is_released_tab = (tab.name == "Released")
+            is_recent_tab = (tab.name == "Recent")
         except SheetTab.DoesNotExist:
             pass
     
@@ -321,8 +338,68 @@ def song_list(request):
         
         songs_with_tabs.append(song)
     
+    # Sort songs by leak date for Recent tab (newest first)
+    if is_recent_tab:
+        import re
+        from datetime import datetime
+        
+        # Define common date formats to try
+        def parse_date(date_str):
+            if not date_str:
+                return None
+                
+            date_formats = [
+                '%B %d, %Y',      # March 15, 2024
+                '%b %d, %Y',      # Mar 15, 2024
+                '%Y-%m-%d',       # 2024-03-15
+                '%m/%d/%Y',       # 03/15/2024
+                '%d %B %Y',       # 15 March 2024
+                '%d %b %Y',       # 15 Mar 2024
+                '%B %Y',          # March 2024
+                '%b %Y',          # Mar 2024
+                '%m/%Y',          # 03/2024
+                '%Y',             # 2024
+                '%m/%d/%y',       # 03/15/24
+                '%d/%m/%y',       # 15/03/24
+            ]
+            
+            # Try each format
+            for fmt in date_formats:
+                try:
+                    return datetime.strptime(date_str, fmt)
+                except ValueError:
+                    continue
+            
+            # If no format matches, try to extract year at least
+            year_match = re.search(r'20\d{2}', date_str)
+            if year_match:
+                year = year_match.group(0)
+                return datetime(int(year), 1, 1)  # Default to Jan 1 of the year
+                
+            return None
+        
+        # Custom sorting function with date parsing
+        def sort_by_leak_date(song):
+            # Try leak_date first
+            if hasattr(song, 'leak_date') and song.leak_date:
+                date_obj = parse_date(song.leak_date)
+                if date_obj:
+                    return -date_obj.timestamp()  # Negative for descending order
+            
+            # Try file_date if leak_date wasn't available or couldn't be parsed
+            if hasattr(song, 'file_date') and song.file_date:
+                date_obj = parse_date(song.file_date)
+                if date_obj:
+                    return -date_obj.timestamp()  # Negative for descending order
+            
+            # Fall back to ID sorting if no date (bigger ID = more recent)
+            return -song.id
+        
+        # Sort songs by leak date, newest first
+        songs_with_tabs.sort(key=sort_by_leak_date)
+        
     # Sort songs by album and track number for Released tab
-    if is_released_tab:
+    elif is_released_tab:
         # Group songs by album
         albums = {}
         versions = []  # To store version variants
@@ -702,6 +779,62 @@ def fit_pics_page(request):
             models.Q(photographer__icontains=query)
         )
     
+    # Custom date-based sorting
+    import re
+    from datetime import datetime
+    
+    # Define common date formats to try
+    def parse_date(date_str):
+        if not date_str:
+            return None
+            
+        date_formats = [
+            '%B %d, %Y',      # March 15, 2024
+            '%b %d, %Y',      # Mar 15, 2024
+            '%Y-%m-%d',       # 2024-03-15
+            '%m/%d/%Y',       # 03/15/2024
+            '%d %B %Y',       # 15 March 2024
+            '%d %b %Y',       # 15 Mar 2024
+            '%B %Y',          # March 2024
+            '%b %Y',          # Mar 2024
+            '%m/%Y',          # 03/2024
+            '%Y',             # 2024
+            '%m/%d/%y',       # 03/15/24
+            '%d/%m/%y',       # 15/03/24
+        ]
+        
+        # Try each format
+        for fmt in date_formats:
+            try:
+                return datetime.strptime(date_str, fmt)
+            except ValueError:
+                continue
+        
+        # If no format matches, try to extract year at least
+        year_match = re.search(r'20\d{2}', date_str)
+        if year_match:
+            year = year_match.group(0)
+            return datetime(int(year), 1, 1)  # Default to Jan 1 of the year
+            
+        return None
+    
+    # Custom sorting function
+    def sort_by_date(item):
+        # Sort by parsed date (newest first)
+        date_obj = parse_date(item.release_date)
+        if date_obj:
+            # Use timestamp for comparison
+            return -date_obj.timestamp()
+        
+        # Fall back to ID sorting if no date (bigger ID = more recent)
+        return -item.id
+    
+    # Get all fit pics as a list to apply custom sorting
+    fit_pics_list = list(fit_pics)
+    
+    # Apply custom sorting by date
+    fit_pics_sorted = sorted(fit_pics_list, key=sort_by_date)
+    
     # Get filter options from the database
     eras = FitPic.objects.values_list('era', flat=True).distinct().order_by('era')
     eras = [era for era in eras if era]  # Filter out None or empty values
@@ -713,7 +846,7 @@ def fit_pics_page(request):
     qualities = [q for q in qualities if q]  # Filter out None or empty values
     
     # If database is empty, provide sample data
-    if not fit_pics.exists():
+    if not fit_pics_sorted:
         # Create some sample placeholder items for initial display
         placeholders = [
             {
@@ -756,13 +889,13 @@ def fit_pics_page(request):
                     return self.image_url
                 return None
         
-        fit_pics = [PlaceholderObj(item) for item in placeholders]
+        fit_pics_sorted = [PlaceholderObj(item) for item in placeholders]
         eras = ["Die Lit", "WLR V1"]
         pic_types = ["Post"]
         qualities = ["High Quality"]
     
     # Pagination
-    paginator = Paginator(fit_pics, 12)  # Show 12 items per page
+    paginator = Paginator(fit_pics_sorted, 12)  # Show 12 items per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
