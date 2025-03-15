@@ -7,6 +7,7 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('songs/', views.song_list, name='song_list'),
     path('songs/<int:song_id>/', views.song_detail, name='song_detail'),
+    path('songs/<int:song_id>/vote/', views.vote_song, name='vote_song'),
     path('media/', views.media_page, name='media'),
     path('media/art/', views.art_page, name='art'),
     path('media/interviews/', views.interviews_page, name='interviews'),

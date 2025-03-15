@@ -6,6 +6,35 @@
     {% load static %}
     <link rel="stylesheet" href="{% static 'catalog/css/style.css' %}?v=1.4">
     <link rel="icon" type="image/x-icon" href="{% static 'catalog/img/high_res_favicon.ico' %}">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        /* Voting button styles */
+        #voting-section .like-count, 
+        #voting-section .dislike-count {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-top: 5px;
+            color: #333;
+        }
+        
+        #voting-section button {
+            font-size: 1.1rem;
+            padding: 8px;
+            border-color: #ddd;
+        }
+        
+        #voting-section button.active {
+            font-weight: bold;
+            background-color: #333;
+            color: white;
+            border-color: #333;
+        }
+        
+        #voting-section .card {
+            border-color: #eee;
+        }
+    </style>
 </head>
 <body>
     <!-- Navbar - Minimalist -->
@@ -59,8 +88,8 @@
     <script src="{% static 'catalog/js/album-interaction.js' %}?v=1.3"></script>
     <script>
         // Force refresh of browser cache
-        if (localStorage.getItem('cache_version') !== '1.9') {
-            localStorage.setItem('cache_version', '1.9');
+        if (localStorage.getItem('cache_version') !== '2.1') {
+            localStorage.setItem('cache_version', '2.1');
             location.reload(true);
         }
     </script>

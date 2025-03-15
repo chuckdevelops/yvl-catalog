@@ -665,3 +665,22 @@ class SocialMedia(models.Model):
         if self.platform in platform_icons:
             return platform_icons[self.platform]
         return 'https://placehold.co/400x400?text=Social+Media'
+        
+class SongVote(models.Model):
+    """Model to track user votes (likes/dislikes) for songs."""
+    song = models.ForeignKey('CartiCatalog', on_delete=models.CASCADE, related_name='votes')
+    ip_address = models.GenericIPAddressField(help_text="IP address of the voter for preventing duplicate votes")
+    session_key = models.CharField(max_length=40, blank=True, null=True, help_text="Session key to track votes")
+    vote_type = models.CharField(max_length=10, choices=[('like', 'Like'), ('dislike', 'Dislike')])
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        managed = True
+        db_table = 'song_vote'
+        verbose_name = 'Song Vote'
+        verbose_name_plural = 'Song Votes'
+        # Ensure each IP can only vote once per song
+        unique_together = ('song', 'ip_address')
+        
+    def __str__(self):
+        return f"{self.vote_type} for {self.song} by {self.ip_address}"

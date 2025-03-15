@@ -71,9 +71,13 @@ def split(value, delimiter='\n'):
 def format_type(value):
     """
     Format 'Yes' to 'Streaming' and 'No' to 'Off Streaming'
+    This filter handles legacy data in case any values are still 'Yes'/'No'
     """
-    if value == "Yes":
+    if not value:
+        return value
+        
+    if value.lower() == "yes":
         return "Streaming"
-    elif value == "No":
+    elif value.lower() == "no":
         return "Off Streaming"
     return value

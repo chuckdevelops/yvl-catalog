@@ -111,6 +111,9 @@
                         <tr>
                             <td>
                                 <a href="{% url 'catalog:song_detail' song_id=song.id %}">{{ song.name }}</a>
+                                {% if song.file_date == 'Album Track' %}
+                                    <span class="badge bg-secondary">Official Album Track</span>
+                                {% endif %}
                                 <!-- Track number badges removed -->
                             </td>
                             <td>{% if song.era %}{{ song.era }}{% else %}<em>Unknown</em>{% endif %}</td>

@@ -1,10 +1,12 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.core.paginator import Paginator
-from django.db.models import Q, Count
-from django.db import models
+from django.db.models import Q, Count, Sum, Case, When, IntegerField
+from django.db import models, transaction
 from django.template.defaulttags import register
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 import re
-from .models import CartiCatalog, SheetTab, SongMetadata
+from .models import CartiCatalog, SheetTab, SongMetadata, SongVote
 
 # Add template filter to get items from a list by index
 @register.filter
@@ -1024,6 +1026,19 @@ def song_detail(request, song_id):
     # Get songs from the same era for recommendations
     related_songs = CartiCatalog.objects.filter(era=song.era).exclude(id=song.id)[:5]
     
+    # Get vote counts
+    like_count = SongVote.objects.filter(song=song, vote_type='like').count()
+    dislike_count = SongVote.objects.filter(song=song, vote_type='dislike').count()
+    
+    # Check if current user has voted
+    user_ip = get_client_ip(request)
+    user_vote = None
+    if user_ip:
+        try:
+            user_vote = SongVote.objects.get(song=song, ip_address=user_ip).vote_type
+        except SongVote.DoesNotExist:
+            pass
+    
     # Clean song name by removing version indicators like [V2], [V3], etc.
     import re
     if song.name:
@@ -1229,5 +1244,75 @@ def song_detail(request, song_id):
         'song': song,
         'related_songs': related_songs,
         'album_related_songs': album_related_songs,
+        'like_count': like_count,
+        'dislike_count': dislike_count,
+        'user_vote': user_vote,
     }
     return render(request, 'catalog/song_detail.html', context)
+    
+def get_client_ip(request):
+    """Get the client's IP address from the request."""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+@require_POST
+def vote_song(request, song_id):
+    """Handle song voting (like/dislike)"""
+    song = get_object_or_404(CartiCatalog, id=song_id)
+    vote_type = request.POST.get('vote_type')
+    
+    if vote_type not in ['like', 'dislike']:
+        return JsonResponse({'status': 'error', 'message': 'Invalid vote type'}, status=400)
+    
+    # Get user's IP address
+    ip_address = get_client_ip(request)
+    session_key = request.session.session_key
+    
+    # Create session if it doesn't exist
+    if not session_key:
+        request.session.create()
+        session_key = request.session.session_key
+    
+    try:
+        with transaction.atomic():
+            # Check if user has already voted
+            try:
+                existing_vote = SongVote.objects.get(song=song, ip_address=ip_address)
+                
+                # If user is changing their vote
+                if existing_vote.vote_type != vote_type:
+                    existing_vote.vote_type = vote_type
+                    existing_vote.save()
+                    message = f"Changed your vote to {vote_type}"
+                else:
+                    # Remove the vote if clicking the same button again
+                    existing_vote.delete()
+                    message = "Vote removed"
+            except SongVote.DoesNotExist:
+                # Create a new vote
+                SongVote.objects.create(
+                    song=song,
+                    ip_address=ip_address,
+                    session_key=session_key,
+                    vote_type=vote_type
+                )
+                message = f"Thanks for your {vote_type}!"
+                
+        # Get updated vote counts
+        like_count = SongVote.objects.filter(song=song, vote_type='like').count()
+        dislike_count = SongVote.objects.filter(song=song, vote_type='dislike').count()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': message,
+            'like_count': like_count,
+            'dislike_count': dislike_count,
+            'user_vote': vote_type if message != "Vote removed" else None
+        })
+        
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
