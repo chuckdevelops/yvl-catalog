@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <style>
+    @keyframes spin {
+      from { transform: rotate(0deg); transform-origin: 16px 16px; }
+      to { transform: rotate(360deg); transform-origin: 16px 16px; }
+    }
+    #record {
+      animation: spin 10s linear infinite;
+    }
+    .vinyl-groove {
+      fill: none;
+      stroke: #333;
+      stroke-width: 0.5;
+    }
+  </style>
+  
+  <!-- Static outer ring -->
+  <circle cx="16" cy="16" r="15" fill="#111" stroke="#333" stroke-width="0.5"/>
+  
+  <!-- Spinning elements -->
+  <g id="record">
+    <!-- Vinyl grooves -->
+    <circle class="vinyl-groove" cx="16" cy="16" r="12"/>
+    <circle class="vinyl-groove" cx="16" cy="16" r="10"/>
+    <circle class="vinyl-groove" cx="16" cy="16" r="8"/>
+    <circle class="vinyl-groove" cx="16" cy="16" r="6"/>
+    
+    <!-- Center hole -->
+    <circle cx="16" cy="16" r="2.5" fill="#444" stroke="#555" stroke-width="0.5"/>
+    
+    <!-- Label -->
+    <circle cx="16" cy="16" r="4" fill="#222" stroke="#444" stroke-width="0.3"/>
+    
+    <!-- "C" for Carti -->
+    <text x="16" y="19" font-family="Arial" font-size="5" font-weight="bold" text-anchor="middle" fill="#fff">C</text>
+  </g>
+</svg>

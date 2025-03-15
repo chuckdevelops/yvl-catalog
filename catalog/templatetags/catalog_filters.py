@@ -66,3 +66,14 @@ def split(value, delimiter='\n'):
     if not value:
         return []
     return value.split(delimiter)
+
+@register.filter
+def format_type(value):
+    """
+    Format 'Yes' to 'Streaming' and 'No' to 'Off Streaming'
+    """
+    if value == "Yes":
+        return "Streaming"
+    elif value == "No":
+        return "Off Streaming"
+    return value

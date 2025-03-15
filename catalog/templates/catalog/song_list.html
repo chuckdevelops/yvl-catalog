@@ -52,9 +52,10 @@
                 <label for="type" class="form-label">Type</label>
                 <select name="type" id="type" class="form-select">
                     <option value="">All Types</option>
+                    {% load catalog_filters %}
                     {% for type in types %}
                         <option value="{{ type }}" {% if type_filter == type %}selected{% endif %}>
-                            {{ type }}
+                            {{ type|format_type }}
                         </option>
                     {% endfor %}
                 </select>
@@ -143,7 +144,7 @@
                                     <em>Unknown</em>
                                 {% endif %}
                             </td>
-                            <td>{% if song.type and song.type != "NaN" and song.type != "nan" %}{{ song.type }}{% else %}<em></em>{% endif %}</td>
+                            <td>{% if song.type and song.type != "NaN" and song.type != "nan" %}{{ song.type|format_type }}{% else %}<em></em>{% endif %}</td>
                             <td>{% if song.quality and song.quality != "NaN" and song.quality != "nan" %}{{ song.quality }}{% else %}<em></em>{% endif %}</td>
                             <td>{% if song.leak_date and song.leak_date != "NaN" and song.leak_date != "nan" %}{{ song.leak_date }}{% else %}<em></em>{% endif %}</td>
                             <td>

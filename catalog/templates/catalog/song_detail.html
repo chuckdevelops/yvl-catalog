@@ -63,7 +63,7 @@
                         {% endif %}
                         <tr>
                             <th>Type:</th>
-                            <td>{% if song.type and song.type != "NaN" and song.type != "nan" %}{{ song.type }}{% else %}<em></em>{% endif %}</td>
+                            <td>{% if song.type and song.type != "NaN" and song.type != "nan" %}{{ song.type|format_type }}{% else %}<em></em>{% endif %}</td>
                         </tr>
                         <tr>
                             <th>Quality:</th>

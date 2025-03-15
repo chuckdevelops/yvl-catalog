@@ -3,8 +3,6 @@
 {% block title %}Playboi Carti Music Catalog{% endblock %}
 
 {% block content %}
-
-<!-- Main Info Section -->
 <div class="row">
     <div class="col-lg-8 mx-auto">
         <div class="jumbotron bg-light p-5 rounded">
@@ -102,14 +100,16 @@
                                     </td>
                                     <td>{% if song.era %}{{ song.era }}{% else %}<em>Unknown</em>{% endif %}</td>
                                     <td>
-                                        {% if song.sheet_tab_name and song.sheet_tab_name != "Unknown" %}
-                                            {{ song.sheet_tab_name }}
-                                            <!-- Subsection name display removed -->
+                                        {% if song.primary_tab_name and song.primary_tab_name != "Unknown" %}
+                                            {{ song.primary_tab_name }}
+                                            {% if song.subsection_name %}
+                                                <small class="text-muted">({{ song.subsection_name }})</small>
+                                            {% endif %}
                                         {% else %}
                                             <em>Unknown</em>
                                         {% endif %}
                                     </td>
-                                    <td>{{ song.type }}</td>
+                                    <td>{% load catalog_filters %}{{ song.type|format_type }}</td>
                                     <td>{{ song.quality }}</td>
                                     <td>{{ song.leak_date }}</td>
                                 </tr>
