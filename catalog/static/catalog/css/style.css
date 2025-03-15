@@ -32,3 +32,108 @@ body {
 form label {
     font-weight: 500;
 }
+
+/* Kadence layout styling for album display */
+.kt-row-layout-inner {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.kt-row-column-wrap {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 0 auto;
+}
+
+.wp-block-kadence-column {
+    flex: 0;
+    min-width: 0;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    padding: 0 5px;
+    display: flex;
+    flex-direction: column;
+}
+
+.kt-inside-inner-col {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.wp-block-group__inner-container {
+    display: flex;
+    justify-content: center;
+}
+
+.wp-block-image {
+    margin: 0;
+    max-width: 100%;
+}
+
+.wp-block-image img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+/* Album disk styling */
+.disk img {
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0 2px;
+}
+
+.disk img:hover {
+    transform: scale(1.05);
+}
+
+/* Album footer styling */
+.album-row {
+    display: inline-block;
+    margin-left: 5px;
+    vertical-align: middle;
+}
+
+.album-icon {
+    border-radius: 50%;
+    vertical-align: middle;
+    margin: 0 2px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Album spinning animation */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.album-icon.spin {
+    animation: spin 20s linear infinite;
+}
+
+/* Media queries for responsive layout */
+@media (max-width: 767px) {
+    .kt-row-column-wrap {
+        flex-direction: column;
+    }
+    
+    .wp-block-kadence-column {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+}
