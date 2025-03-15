@@ -1,4 +1,5 @@
 from django import template
+import re
 
 register = template.Library()
 
@@ -41,3 +42,27 @@ def filter_ai_badge(emoji_tabs, song_name):
             # Keep all non-emoji tabs
             filtered_tabs.append(tab)
     return filtered_tabs
+    
+@register.filter
+def youtube_embed_url(url):
+    """Convert YouTube URL to embed URL format"""
+    if not url or 'youtube.com' not in url and 'youtu.be' not in url:
+        return ''
+    
+    youtube_pattern = r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})'
+    match = re.search(youtube_pattern, url)
+    if match:
+        video_id = match.group(1)
+        return f"https://www.youtube.com/embed/{video_id}"
+    return ''
+    
+@register.filter
+def split(value, delimiter='\n'):
+    """
+    Split a string by delimiter.
+    Example usage: {{ value|split }} - splits by newlines by default
+    Example usage: {{ value|split:',' }} - splits by commas
+    """
+    if not value:
+        return []
+    return value.split(delimiter)

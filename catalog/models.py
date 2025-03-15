@@ -550,3 +550,112 @@ class ArtMedia(models.Model):
     
     def __str__(self):
         return self.name
+
+class Interview(models.Model):
+    """Model for Playboi Carti Interview items."""
+    era = models.CharField(max_length=100, blank=True, null=True)
+    date = models.CharField(max_length=100, blank=True, null=True)
+    outlet = models.CharField(max_length=255, blank=True, null=True)
+    subject_matter = models.CharField(max_length=255, blank=True, null=True)
+    special_notes = models.TextField(blank=True, null=True)
+    interview_type = models.CharField(max_length=100, blank=True, null=True)
+    available = models.BooleanField(default=True)
+    archived_link = models.URLField(blank=True, null=True)
+    source_links = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        managed = True
+        db_table = 'interview'
+        verbose_name = 'Interview'
+        verbose_name_plural = 'Interviews'
+        ordering = ['era', 'date']
+    
+    def __str__(self):
+        return f"{self.outlet} - {self.subject_matter or 'Interview'} ({self.date or 'Unknown Date'})"
+    
+    @property
+    def thumbnail(self):
+        """Generate youtube thumbnail if the source link is a youtube video"""
+        if self.source_links and 'youtube.com' in self.source_links:
+            # Extract video ID from YouTube link
+            import re
+            youtube_pattern = r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})'
+            match = re.search(youtube_pattern, self.source_links)
+            if match:
+                video_id = match.group(1)
+                return f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+        return None
+        
+class FitPic(models.Model):
+    """Model for Playboi Carti fashion photos and outfit pictures."""
+    era = models.CharField(max_length=100, blank=True, null=True)
+    caption = models.CharField(max_length=255, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    photographer = models.CharField(max_length=100, blank=True, null=True)
+    release_date = models.CharField(max_length=100, blank=True, null=True)
+    pic_type = models.CharField(max_length=100, blank=True, null=True)
+    portion = models.CharField(max_length=100, blank=True, null=True)
+    quality = models.CharField(max_length=100, blank=True, null=True)
+    image_url = models.TextField(blank=True, null=True)  # Using TextField to store scraped image
+    source_links = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        managed = True
+        db_table = 'fit_pic'
+        verbose_name = 'Fit Pic'
+        verbose_name_plural = 'Fit Pics'
+        ordering = ['era', 'release_date']
+    
+    def __str__(self):
+        return f"{self.caption or 'Fit Pic'} ({self.era or 'Unknown Era'} - {self.release_date or 'Unknown Date'})"
+    
+    @property
+    def thumbnail(self):
+        """Return the image URL or try to generate from Instagram link"""
+        if self.image_url:
+            return self.image_url
+        elif self.source_links and 'instagram.com' in self.source_links:
+            # For future implementation - could extract Instagram image
+            # Currently returning None as we'll need to scrape the images
+            return None
+        return None
+        
+class SocialMedia(models.Model):
+    """Model for Playboi Carti social media accounts."""
+    era = models.CharField(max_length=100, blank=True, null=True)
+    username = models.CharField(max_length=255, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    platform = models.CharField(max_length=100, blank=True, null=True)
+    last_post = models.CharField(max_length=100, blank=True, null=True)
+    still_used = models.BooleanField(default=False)
+    link = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        managed = True
+        db_table = 'social_media'
+        verbose_name = 'Social Media Account'
+        verbose_name_plural = 'Social Media Accounts'
+        ordering = ['era', 'platform']
+    
+    def __str__(self):
+        return f"{self.username or 'Unknown'} ({self.platform or 'Unknown Platform'} - {self.era or 'Unknown Era'})"
+    
+    @property
+    def thumbnail(self):
+        """Generate placeholder thumbnail based on platform"""
+        platform_icons = {
+            'Instagram': 'https://placehold.co/400x400?text=Instagram',
+            'X': 'https://placehold.co/400x400?text=X/Twitter',
+            'Twitter': 'https://placehold.co/400x400?text=X/Twitter',
+            'Soundcloud': 'https://placehold.co/400x400?text=Soundcloud',
+            'Youtube': 'https://placehold.co/400x400?text=Youtube',
+            'TikTok': 'https://placehold.co/400x400?text=TikTok',
+            'TUMBLR': 'https://placehold.co/400x400?text=Tumblr',
+            'Spotify': 'https://placehold.co/400x400?text=Spotify',
+            'Apple Music': 'https://placehold.co/400x400?text=Apple+Music',
+            'Facebook': 'https://placehold.co/400x400?text=Facebook',
+        }
+        
+        if self.platform in platform_icons:
+            return platform_icons[self.platform]
+        return 'https://placehold.co/400x400?text=Social+Media'

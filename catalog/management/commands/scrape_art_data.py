@@ -1,32 +1,26 @@
 from django.core.management.base import BaseCommand
-from catalog.models import ArtMedia
-import pandas as pd
-import os
 import requests
-from urllib.parse import urlparse
-from django.conf import settings
-import re
-try:
-    from bs4 import BeautifulSoup
-except ImportError:
-    # This will be handled in the command's handle method
-    BeautifulSoup = None
+from bs4 import BeautifulSoup
+from catalog.models import ArtMedia
 import time
-import csv
+import re
+from urllib.parse import urlparse
+import os
+from django.conf import settings
 
 class Command(BaseCommand):
-    help = 'Import art media data from a CSV file and download associated images'
+    help = 'Scrape art data directly from a Google Sheets public page'
 
     def add_arguments(self, parser):
+        parser.add_argument(
+            'url',
+            type=str,
+            help='The URL of the published Google Sheet',
+        )
         parser.add_argument(
             '--force',
             action='store_true',
             help='Force update all entries even if they already exist',
-        )
-        parser.add_argument(
-            '--csv',
-            type=str,
-            help='Path to the CSV file containing art data',
         )
         parser.add_argument(
             '--download-images',
@@ -184,88 +178,132 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f"Error downloading image: {e}"))
             return None
 
-    def parse_csv(self, csv_path):
-        """Parse CSV file into art data list"""
-        art_data = []
-        
+    def scrape_sheets_data(self, url):
+        """Scrape art data from a published Google Sheet"""
         try:
-            with open(csv_path, 'r', encoding='utf-8') as csvfile:
-                reader = csv.DictReader(csvfile)
-                for row in reader:
-                    # Skip header row or empty rows
-                    if not row or 'Era' in row and row['Era'] == 'Era':
-                        continue
-                        
-                    # Extract data from CSV row
-                    item = {
-                        'era': row.get('Era', '').strip(),
-                        'name': row.get('Name', '').strip(),
-                        'notes': row.get('Notes', '').strip(),
-                        'image_url': '',  # Will be populated later
-                        'media_type': row.get('Type', '').strip(),
-                        'was_used': row.get('Used?', '').strip().lower() == 'yes',
-                        'links': row.get('Link(s)', '').strip()
-                    }
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+            response = requests.get(url, headers=headers)
+            
+            if response.status_code != 200:
+                self.stdout.write(self.style.ERROR(f"Failed to fetch the page: {response.status_code}"))
+                return []
+                
+            # Parse the HTML
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Extract the table - this is specific to Google Sheets published format
+            # We're looking for a table with the appropriate columns
+            tables = soup.find_all('table')
+            
+            if not tables:
+                self.stdout.write(self.style.ERROR("No tables found on the page"))
+                return []
+                
+            # We assume the main table is the one with the data
+            # Look for a table with headers matching the expected structure
+            art_data = []
+            for table in tables:
+                headers = [th.get_text().strip() for th in table.find_all('th')]
+                
+                # Check if this table has the expected headers or similar
+                expected_headers = ['Era', 'Name', 'Notes', 'Type', 'Used']
+                found_headers = [h for h in expected_headers if any(e.lower() in h.lower() for h in headers)]
+                
+                if len(found_headers) >= 3:  # At least 3 matching headers
+                    # Find the index positions of each required column
+                    header_map = {}
+                    for i, header in enumerate(headers):
+                        header_lower = header.lower()
+                        if 'era' in header_lower:
+                            header_map['era'] = i
+                        elif 'name' in header_lower:
+                            header_map['name'] = i
+                        elif 'notes' in header_lower:
+                            header_map['notes'] = i
+                        elif 'type' in header_lower:
+                            header_map['type'] = i
+                        elif 'used' in header_lower:
+                            header_map['used'] = i
+                        elif 'link' in header_lower:
+                            header_map['links'] = i
                     
-                    # Skip rows without a name
-                    if not item['name']:
-                        continue
+                    # If we have at least name and era, we can process this table
+                    if 'name' in header_map and 'era' in header_map:
+                        # Process rows
+                        rows = table.find_all('tr')
                         
-                    art_data.append(item)
-                    
+                        # Skip header row
+                        for row in rows[1:]:
+                            cells = row.find_all('td')
+                            
+                            # Skip rows with insufficient cells
+                            if len(cells) <= max(header_map.values()):
+                                continue
+                                
+                            # Extract data based on header positions
+                            item = {
+                                'era': cells[header_map.get('era', 0)].get_text().strip(),
+                                'name': cells[header_map.get('name', 1)].get_text().strip(),
+                                'notes': cells[header_map.get('notes', 2)].get_text().strip() if 'notes' in header_map else '',
+                                'image_url': '',  # Will be populated later
+                                'media_type': cells[header_map.get('type', 3)].get_text().strip() if 'type' in header_map else '',
+                                'was_used': 'yes' in cells[header_map.get('used', 4)].get_text().strip().lower() if 'used' in header_map else False,
+                                'links': ''  # Will extract links from cells below
+                            }
+                            
+                            # Look for links in this row
+                            if 'links' in header_map:
+                                # Try to extract an href from the links cell
+                                link_cell = cells[header_map['links']]
+                                link_a = link_cell.find('a')
+                                if link_a and link_a.has_attr('href'):
+                                    item['links'] = link_a['href']
+                            else:
+                                # If no specific links column, look for links in any cell
+                                for cell in cells:
+                                    link_a = cell.find('a')
+                                    if link_a and link_a.has_attr('href'):
+                                        link = link_a['href']
+                                        # Only use image-related links
+                                        if any(domain in link for domain in ['imgur.com', 'tumblr.com', '.jpg', '.png', '.gif']):
+                                            item['links'] = link
+                                            break
+                            
+                            # Skip rows without a name or with very short names
+                            if len(item['name']) < 2:
+                                continue
+                                
+                            art_data.append(item)
+                        
+                        # If we found data, stop processing tables
+                        if art_data:
+                            break
+            
             return art_data
-                    
+            
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Error parsing CSV: {e}"))
+            self.stdout.write(self.style.ERROR(f"Error scraping Google Sheets: {e}"))
             return []
 
     def handle(self, *args, **options):
-        # Check for required dependencies
-        if download_images and BeautifulSoup is None:
-            self.stdout.write(self.style.ERROR("BeautifulSoup4 is required for image downloading. Please install it with: pip install beautifulsoup4"))
-            return
-            
+        url = options['url']
         force_update = options.get('force', False)
-        csv_path = options.get('csv')
         download_images = options.get('download_images', False)
         
-        # Try to read from CSV if provided
-        if csv_path and os.path.exists(csv_path):
-            art_data = self.parse_csv(csv_path)
-            self.stdout.write(f"Read {len(art_data)} art items from CSV file")
-        else:
-            # Sample art data if no CSV is provided
-            self.stdout.write(self.style.WARNING("No valid CSV file provided, using sample data"))
-            art_data = [
-                {
-                    'era': 'Aviation Class',
-                    'name': 'TOO FLY KID',
-                    'notes': 'unknown purpose',
-                    'image_url': 'https://placehold.co/600x600/png?text=TOO+FLY+KID',
-                    'media_type': 'Unknown',
-                    'was_used': False,
-                    'links': ''
-                },
-                {
-                    'era': 'Killing Me Softly',
-                    'name': 'Killing Me Softly',
-                    'notes': 'Coverart for Carti\'s 2010 or 2011 project "Killing Me Softly. The album uses the same image as it\'s cover as Nas\'s NASIR, even though the album was concieved 6 years before NASIR.',
-                    'image_url': 'https://placehold.co/600x600/png?text=Killing+Me+Softly',
-                    'media_type': 'Album Cover',
-                    'was_used': True,
-                    'links': 'https://yungcarti.tumblr.com/image/4992098042'
-                },
-                {
-                    'era': 'THC: The High Chronicals',
-                    'name': 'The High Chronicals',
-                    'notes': 'The art for Playboi Carti\'s (then known as $ir Cartier) mixtape "The High Chronicals"',
-                    'image_url': 'https://placehold.co/600x600/png?text=The+High+Chronicals',
-                    'media_type': 'Album Cover',
-                    'was_used': True,
-                    'links': 'https://imgur.com/6q1dUzi'
-                }
-            ]
+        # Validate URL - basic check for Google Sheets URL
+        if 'docs.google.com' not in url and 'sheets.google.com' not in url:
+            self.stdout.write(self.style.WARNING("URL doesn't appear to be a Google Sheets URL. The scraper might not work correctly."))
+        
+        # Scrape the data
+        self.stdout.write(f"Scraping art data from: {url}")
+        art_data = self.scrape_sheets_data(url)
+        
+        if not art_data:
+            self.stdout.write(self.style.ERROR("No art data could be extracted from the provided URL"))
+            return
             
+        self.stdout.write(f"Scraped {len(art_data)} art items from Google Sheets")
+        
         if download_images:
             self.stdout.write("Image download enabled. Will attempt to fetch images from source links.")
             
@@ -306,7 +344,7 @@ class Command(BaseCommand):
                 if not item.get('image_url'):
                     item['image_url'] = f"https://placehold.co/600x600/png?text={item['name'].replace(' ', '+')}"
         
-        self.stdout.write(f"Processing {len(art_data)} art media items")
+        self.stdout.write(f"Processing {len(art_data)} art media items for database import")
         
         created_count = 0
         updated_count = 0

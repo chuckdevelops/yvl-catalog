@@ -436,11 +436,11 @@ def song_list(request):
 def media_page(request):
     """Media hub page with links to different media categories"""
     # Get counts for each media type
-    from .models import ArtMedia
+    from .models import ArtMedia, Interview, FitPic, SocialMedia
     art_count = ArtMedia.objects.count()
-    interviews_count = 0  # Implement this when the model is created
-    fit_pics_count = 0    # Implement this when the model is created
-    social_media_count = 0 # Implement this when the model is created
+    interviews_count = Interview.objects.count()
+    fit_pics_count = FitPic.objects.count()
+    social_media_count = SocialMedia.objects.count()
     
     context = {
         'art_count': art_count,
@@ -534,6 +534,311 @@ def art_page(request):
         'query': query
     }
     return render(request, 'catalog/art.html', context)
+
+def interviews_page(request):
+    """Interviews page displaying interviews, conversations and media appearances"""
+    # Get filter parameters
+    era_filter = request.GET.get('era', '')
+    type_filter = request.GET.get('type', '')
+    available_filter = request.GET.get('available', '')
+    query = request.GET.get('q', '')
+    
+    # Get data from the database
+    from .models import Interview
+    interviews = Interview.objects.all()
+    
+    # Apply filters
+    if era_filter:
+        interviews = interviews.filter(era=era_filter)
+    if type_filter:
+        interviews = interviews.filter(interview_type=type_filter)
+    if available_filter:
+        is_available = available_filter == 'yes'
+        interviews = interviews.filter(available=is_available)
+    if query:
+        interviews = interviews.filter(
+            models.Q(outlet__icontains=query) | 
+            models.Q(subject_matter__icontains=query) | 
+            models.Q(special_notes__icontains=query)
+        )
+    
+    # Get filter options from the database
+    eras = Interview.objects.values_list('era', flat=True).distinct().order_by('era')
+    eras = [era for era in eras if era]  # Filter out None or empty values
+    
+    interview_types = Interview.objects.values_list('interview_type', flat=True).distinct().order_by('interview_type')
+    interview_types = [it for it in interview_types if it]  # Filter out None or empty values
+    
+    # If database is empty, provide sample data
+    if not interviews.exists():
+        # Create some sample placeholder items for initial display
+        placeholders = [
+            {
+                'id': 1,
+                'outlet': 'Know Nothing Presents',
+                'subject_matter': 'Frank Whitelemon sits down with Playboi Carti',
+                'era': 'Awful Records',
+                'date': 'July 14, 2014',
+                'special_notes': 'First Carti Interview ever! Original video was taken down',
+                'interview_type': 'Interview',
+                'available': True,
+                'archived_link': '',
+                'source_links': 'https://www.youtube.com/watch?v=Z3mjPSoQhPk'
+            },
+            {
+                'id': 2,
+                'outlet': 'HotNewHipHop',
+                'subject_matter': "Meet Awful Records'Father, Archibald Slim & Playboi Carti",
+                'era': 'Awful Records',
+                'date': 'January 27, 2015',
+                'special_notes': '',
+                'interview_type': 'Interview',
+                'available': True,
+                'archived_link': '',
+                'source_links': 'https://www.youtube.com/watch?v=4Z8xXD90wFA'
+            }
+        ]
+        
+        # Convert raw dicts to a structure similar to model instances for template compatibility
+        class PlaceholderObj:
+            def __init__(self, data):
+                for key, value in data.items():
+                    setattr(self, key, value)
+            
+            @property
+            def thumbnail(self):
+                if hasattr(self, 'source_links') and self.source_links and 'youtube.com' in self.source_links:
+                    import re
+                    youtube_pattern = r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})'
+                    match = re.search(youtube_pattern, self.source_links)
+                    if match:
+                        video_id = match.group(1)
+                        return f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+                return None
+        
+        interviews = [PlaceholderObj(item) for item in placeholders]
+        eras = ["Awful Records"]
+        interview_types = ["Interview"]
+    
+    # Pagination
+    paginator = Paginator(interviews, 12)  # Show 12 items per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'eras': eras,
+        'interview_types': interview_types,
+        'era_filter': era_filter,
+        'type_filter': type_filter,
+        'available_filter': available_filter,
+        'query': query
+    }
+    return render(request, 'catalog/interviews.html', context)
+    
+def fit_pics_page(request):
+    """Fit Pics page displaying fashion photos and outfit pictures"""
+    # Get filter parameters
+    era_filter = request.GET.get('era', '')
+    type_filter = request.GET.get('type', '')
+    quality_filter = request.GET.get('quality', '')
+    query = request.GET.get('q', '')
+    
+    # Get data from the database
+    from .models import FitPic
+    fit_pics = FitPic.objects.all()
+    
+    # Apply filters
+    if era_filter:
+        fit_pics = fit_pics.filter(era=era_filter)
+    if type_filter:
+        fit_pics = fit_pics.filter(pic_type=type_filter)
+    if quality_filter:
+        fit_pics = fit_pics.filter(quality=quality_filter)
+    if query:
+        fit_pics = fit_pics.filter(
+            models.Q(caption__icontains=query) | 
+            models.Q(notes__icontains=query) | 
+            models.Q(photographer__icontains=query)
+        )
+    
+    # Get filter options from the database
+    eras = FitPic.objects.values_list('era', flat=True).distinct().order_by('era')
+    eras = [era for era in eras if era]  # Filter out None or empty values
+    
+    pic_types = FitPic.objects.values_list('pic_type', flat=True).distinct().order_by('pic_type')
+    pic_types = [pt for pt in pic_types if pt]  # Filter out None or empty values
+    
+    qualities = FitPic.objects.values_list('quality', flat=True).distinct().order_by('quality')
+    qualities = [q for q in qualities if q]  # Filter out None or empty values
+    
+    # If database is empty, provide sample data
+    if not fit_pics.exists():
+        # Create some sample placeholder items for initial display
+        placeholders = [
+            {
+                'id': 1,
+                'caption': 'i wanted to let u know as soon as i could but i was shy ! its meh birthday !!! . * ! _ i should drop some :/ ! +:)',
+                'notes': '',
+                'photographer': '',
+                'era': 'Die Lit',
+                'release_date': 'Sep 13, 2018',
+                'pic_type': 'Post',
+                'portion': 'Full',
+                'quality': 'High Quality',
+                'image_url': 'https://placehold.co/400x400?text=Instagram+Image',
+                'source_links': 'https://www.instagram.com/p/CS33MTwLbEl/'
+            },
+            {
+                'id': 2,
+                'caption': '⭐ phone died ! ^',
+                'notes': 'Get Dripped video shoot (features some of cartis best fit pics)',
+                'photographer': 'chadwicktyler',
+                'era': 'WLR V1',
+                'release_date': 'Nov 26, 2018',
+                'pic_type': 'Post',
+                'portion': 'Full',
+                'quality': 'High Quality',
+                'image_url': 'https://placehold.co/400x400?text=Instagram+Image',
+                'source_links': 'https://www.instagram.com/p/CS33RaBrLSP/'
+            }
+        ]
+        
+        # Convert raw dicts to a structure similar to model instances for template compatibility
+        class PlaceholderObj:
+            def __init__(self, data):
+                for key, value in data.items():
+                    setattr(self, key, value)
+                    
+            @property
+            def thumbnail(self):
+                if hasattr(self, 'image_url') and self.image_url:
+                    return self.image_url
+                return None
+        
+        fit_pics = [PlaceholderObj(item) for item in placeholders]
+        eras = ["Die Lit", "WLR V1"]
+        pic_types = ["Post"]
+        qualities = ["High Quality"]
+    
+    # Pagination
+    paginator = Paginator(fit_pics, 12)  # Show 12 items per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'eras': eras,
+        'pic_types': pic_types,
+        'qualities': qualities,
+        'era_filter': era_filter,
+        'type_filter': type_filter,
+        'quality_filter': quality_filter,
+        'query': query
+    }
+    return render(request, 'catalog/fit_pics.html', context)
+
+def social_media_page(request):
+    """Social Media page displaying Carti's social media accounts"""
+    # Get filter parameters
+    era_filter = request.GET.get('era', '')
+    platform_filter = request.GET.get('platform', '')
+    active_filter = request.GET.get('active', '')
+    query = request.GET.get('q', '')
+    
+    # Get data from the database
+    from .models import SocialMedia
+    social_accounts = SocialMedia.objects.all()
+    
+    # Apply filters
+    if era_filter:
+        social_accounts = social_accounts.filter(era=era_filter)
+    if platform_filter:
+        social_accounts = social_accounts.filter(platform=platform_filter)
+    if active_filter:
+        is_active = active_filter == 'yes'
+        social_accounts = social_accounts.filter(still_used=is_active)
+    if query:
+        social_accounts = social_accounts.filter(
+            models.Q(username__icontains=query) | 
+            models.Q(notes__icontains=query) | 
+            models.Q(platform__icontains=query)
+        )
+    
+    # Get filter options from the database
+    eras = SocialMedia.objects.values_list('era', flat=True).distinct().order_by('era')
+    eras = [era for era in eras if era]  # Filter out None or empty values
+    
+    platforms = SocialMedia.objects.values_list('platform', flat=True).distinct().order_by('platform')
+    platforms = [p for p in platforms if p]  # Filter out None or empty values
+    
+    # If database is empty, provide sample data
+    if not social_accounts.exists():
+        # Create some sample placeholder items for initial display
+        placeholders = [
+            {
+                'id': 1,
+                'username': '@yungcarti',
+                'notes': "Cartis tumblr where he posted and promoted his music in early stages of his carrer. His first post was on Nov 30, 2010",
+                'era': '$ir Cartier',
+                'platform': 'TUMBLR',
+                'last_post': 'May 16, 2014',
+                'still_used': False,
+                'link': 'https://yungcarti.tumblr.com',
+            },
+            {
+                'id': 2,
+                'username': '@playboicarti',
+                'notes': "Carti's official IG",
+                'era': 'Ca$h Carti Season',
+                'platform': 'Instagram',
+                'last_post': 'Still Used',
+                'still_used': True,
+                'link': 'https://www.instagram.com/playboicarti/',
+            }
+        ]
+        
+        # Convert raw dicts to a structure similar to model instances for template compatibility
+        class PlaceholderObj:
+            def __init__(self, data):
+                for key, value in data.items():
+                    setattr(self, key, value)
+                    
+            @property
+            def thumbnail(self):
+                platform_icons = {
+                    'Instagram': 'https://placehold.co/400x400?text=Instagram',
+                    'X': 'https://placehold.co/400x400?text=X/Twitter',
+                    'Twitter': 'https://placehold.co/400x400?text=X/Twitter',
+                    'Soundcloud': 'https://placehold.co/400x400?text=Soundcloud',
+                    'Youtube': 'https://placehold.co/400x400?text=Youtube',
+                    'TikTok': 'https://placehold.co/400x400?text=TikTok',
+                    'TUMBLR': 'https://placehold.co/400x400?text=Tumblr',
+                }
+                
+                if hasattr(self, 'platform') and self.platform in platform_icons:
+                    return platform_icons[self.platform]
+                return 'https://placehold.co/400x400?text=Social+Media'
+        
+        social_accounts = [PlaceholderObj(item) for item in placeholders]
+        eras = ["$ir Cartier", "Ca$h Carti Season"]
+        platforms = ["TUMBLR", "Instagram"]
+    
+    # Pagination
+    paginator = Paginator(social_accounts, 12)  # Show 12 items per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'eras': eras,
+        'platforms': platforms,
+        'era_filter': era_filter,
+        'platform_filter': platform_filter,
+        'active_filter': active_filter,
+        'query': query
+    }
+    return render(request, 'catalog/social_media.html', context)
 
 def song_detail(request, song_id):
     """Display detailed information about a specific song"""
