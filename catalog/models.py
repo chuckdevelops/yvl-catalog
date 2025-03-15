@@ -684,3 +684,29 @@ class SongVote(models.Model):
         
     def __str__(self):
         return f"{self.vote_type} for {self.song} by {self.ip_address}"
+
+class HomepageSettings(models.Model):
+    """Model to manage which songs appear on the homepage."""
+    enable_custom_homepage = models.BooleanField(default=False, 
+        help_text="When enabled, the homepage will use the songs selected below instead of the Recent tab")
+    homepage_songs = models.ManyToManyField(CartiCatalog, blank=True, related_name='homepage_displays',
+        help_text="Select songs to display on the homepage (max 10 will be used)")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        managed = True
+        db_table = 'homepage_settings'
+        verbose_name = 'Homepage Settings'
+        verbose_name_plural = 'Homepage Settings'
+    
+    def __str__(self):
+        song_count = self.homepage_songs.count() if self.pk else 0
+        return f"Homepage Settings ({song_count} songs) - Updated: {self.updated_at.strftime('%Y-%m-%d %H:%M')}" if self.pk else "New Homepage Settings"
+    
+    def save(self, *args, **kwargs):
+        # Ensure we only have one instance of settings
+        if not self.pk and HomepageSettings.objects.exists():
+            # Don't create a new one if one already exists
+            return HomepageSettings.objects.first()
+        return super().save(*args, **kwargs)

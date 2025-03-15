@@ -6,7 +6,7 @@ from django.template.defaulttags import register
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 import re
-from .models import CartiCatalog, SheetTab, SongMetadata, SongVote
+from .models import CartiCatalog, SheetTab, SongMetadata, SongVote, HomepageSettings
 
 # Add template filter to get items from a list by index
 @register.filter
@@ -22,47 +22,64 @@ def index(request):
     song_count = CartiCatalog.objects.distinct().count()
     era_count = CartiCatalog.objects.values('era').distinct().count()
     
-    # Get the Recent tab first - we'll use it to get the latest songs
+    # Check if we have custom homepage settings enabled
     try:
-        recent_tab = SheetTab.objects.get(name="Recent")
-        # Get songs from the Recent tab, already sorted newest first by the management command
-        recent_songs = CartiCatalog.objects.select_related('metadata__sheet_tab')\
-            .prefetch_related('categories__sheet_tab')\
-            .filter(categories__sheet_tab=recent_tab)\
-            .distinct()[:10]
-    except SheetTab.DoesNotExist:
-        # Fallback: if Recent tab doesn't exist, just get newest songs by ID
-        recent_songs = CartiCatalog.objects.select_related('metadata__sheet_tab')\
-            .prefetch_related('categories__sheet_tab')\
-            .all().order_by('-id')[:10]
-            
-    # If no songs found, fall back to the hardcoded priority list
-    if not recent_songs.exists():
-        # These are specific songs to display in the order specified
-        specific_recent_songs = []
-        recent_song_queries = [
-            {'name': '🏆 Dancer', 'era': 'TMB Collab'},
-            {'name': '🏆 Paramount', 'era': 'Whole Lotta Red'},
-            {'name': 'DEMONSLURK', 'era': 'MUSIC'},
-            {'name': '⭐ Not Real', 'era': 'Whole Lotta Red'},
-            {'name': 'Cartier', 'era': 'Chucky Era'}
-        ]
-        
-        # Find each song by name and era
-        for query in recent_song_queries:
-            match = CartiCatalog.objects.filter(
-                Q(name__icontains=query['name']) & 
-                Q(era__icontains=query['era'])
-            ).first()
-            if match:
-                specific_recent_songs.append(match)
-        
-        # Use our specific song list or fall back to most recent by ID
-        if specific_recent_songs:
-            recent_songs = specific_recent_songs
+        homepage_settings = HomepageSettings.objects.first()
+        if homepage_settings and homepage_settings.enable_custom_homepage:
+            # Use the custom homepage songs (max 10)
+            recent_songs = homepage_settings.homepage_songs.select_related('metadata__sheet_tab')\
+                .prefetch_related('categories__sheet_tab').all()[:10]
+            if recent_songs.exists():
+                # Convert to list as we're using a limited QuerySet
+                recent_songs = list(recent_songs)
+            else:
+                # Fall back to Recent tab if no songs selected in settings
+                raise HomepageSettings.DoesNotExist()
         else:
+            # Fall back to Recent tab if custom homepage not enabled
+            raise HomepageSettings.DoesNotExist()
+    except (HomepageSettings.DoesNotExist, AttributeError):
+        # Fall back to default behavior with Recent tab
+        try:
+            recent_tab = SheetTab.objects.get(name="Recent")
+            # Get songs from the Recent tab, already sorted newest first by the management command
             recent_songs = CartiCatalog.objects.select_related('metadata__sheet_tab')\
-                .prefetch_related('categories__sheet_tab').all().order_by('-id')[:10]
+                .prefetch_related('categories__sheet_tab')\
+                .filter(categories__sheet_tab=recent_tab)\
+                .distinct()[:10]
+        except SheetTab.DoesNotExist:
+            # Fallback: if Recent tab doesn't exist, just get newest songs by ID
+            recent_songs = CartiCatalog.objects.select_related('metadata__sheet_tab')\
+                .prefetch_related('categories__sheet_tab')\
+                .all().order_by('-id')[:10]
+                
+        # If no songs found, fall back to the hardcoded priority list
+        if not recent_songs.exists():
+            # These are specific songs to display in the order specified
+            specific_recent_songs = []
+            recent_song_queries = [
+                {'name': '🏆 Dancer', 'era': 'TMB Collab'},
+                {'name': '🏆 Paramount', 'era': 'Whole Lotta Red'},
+                {'name': 'DEMONSLURK', 'era': 'MUSIC'},
+                {'name': '⭐ Not Real', 'era': 'Whole Lotta Red'},
+                {'name': 'Cartier', 'era': 'Chucky Era'}
+            ]
+            
+            # Find each song by name and era
+            for query in recent_song_queries:
+                match = CartiCatalog.objects.filter(
+                    Q(name__icontains=query['name']) & 
+                    Q(era__icontains=query['era'])
+                ).first()
+                if match:
+                    specific_recent_songs.append(match)
+            
+            # Use our specific song list or fall back to most recent by ID
+            if specific_recent_songs:
+                recent_songs = specific_recent_songs
+            else:
+                recent_songs = CartiCatalog.objects.select_related('metadata__sheet_tab')\
+                    .prefetch_related('categories__sheet_tab').all().order_by('-id')[:10]
     
     # Add sheet tab info to recent songs
     for song in recent_songs:

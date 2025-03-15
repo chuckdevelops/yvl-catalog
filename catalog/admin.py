@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib import messages
 from django.utils.html import format_html
-from .models import CartiCatalog, SheetTab, SongMetadata, SongCategory, ArtMedia, FitPic, SocialMedia
+from .models import CartiCatalog, SheetTab, SongMetadata, SongCategory, ArtMedia, FitPic, SocialMedia, HomepageSettings
 
 class SongMetadataInline(admin.StackedInline):
     model = SongMetadata
@@ -196,3 +196,37 @@ class SocialMediaAdmin(admin.ModelAdmin):
         updated = queryset.filter(last_post='Still Used').update(still_used=True)
         self.message_user(request, f'Set {updated} accounts with "Still Used" last post to active status.')
     set_still_used.short_description = "Fix: Set accounts with 'Still Used' last post to active"
+    
+@admin.register(HomepageSettings)
+class HomepageSettingsAdmin(admin.ModelAdmin):
+    """Admin for homepage settings"""
+    filter_horizontal = ('homepage_songs',)
+    list_display = ('__str__', 'enable_custom_homepage', 'song_count', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at')
+    fieldsets = (
+        (None, {
+            'fields': ('enable_custom_homepage',),
+            'description': 'Enable custom homepage to show selected songs instead of Recent tab songs'
+        }),
+        ('Song Selection', {
+            'fields': ('homepage_songs',),
+            'description': 'Select up to 10 songs to display on the homepage. Songs will be shown in the order added.'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
+    
+    def song_count(self, obj):
+        count = obj.homepage_songs.count()
+        return count
+    song_count.short_description = 'Number of Songs'
+    
+    def has_add_permission(self, request):
+        # Only allow adding if no instance exists
+        return not HomepageSettings.objects.exists()
+        
+    def has_delete_permission(self, request, obj=None):
+        # Don't allow deleting the settings
+        return False
