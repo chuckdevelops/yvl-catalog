@@ -1,7 +1,11 @@
 from django.contrib import admin
 from django.contrib import messages
 from django.utils.html import format_html
-from .models import CartiCatalog, SheetTab, SongMetadata, SongCategory, ArtMedia, FitPic, SocialMedia, HomepageSettings, ClientIdentifier, SongVote, SongBookmark
+from .models import (
+    CartiCatalog, SheetTab, SongMetadata, SongCategory, ArtMedia, 
+    FitPic, SocialMedia, HomepageSettings, ClientIdentifier, 
+    SongVote, SongBookmark, RecommendationInsights
+)
 
 class SongMetadataInline(admin.StackedInline):
     model = SongMetadata
@@ -301,3 +305,118 @@ class SongBookmarkAdmin(admin.ModelAdmin):
         """Display truncated client hash for readability"""
         return f"{obj.client_identifier[:8]}...{obj.client_identifier[-8:]}"
     client_hash_truncated.short_description = 'Client'
+
+# Create a custom admin view for recommender system insights
+class RecommendationInsightsAdmin(admin.ModelAdmin):
+    """Admin view to gain insights into song recommendation patterns"""
+    change_list_template = 'admin/recommendation_insights.html'
+    
+    def has_add_permission(self, request):
+        return False
+        
+    def has_delete_permission(self, request, obj=None):
+        return False
+        
+    def changelist_view(self, request, extra_context=None):
+        """Override to provide recommendation data in the template"""
+        from django.db.models import Count, Q
+        
+        # Most liked songs (overall popular songs)
+        most_liked_songs = SongVote.objects.filter(
+            vote_type='like'
+        ).values('song').annotate(
+            like_count=Count('id')
+        ).order_by('-like_count')[:10]
+        
+        # Convert to a list of songs with counts
+        most_liked_data = []
+        for item in most_liked_songs:
+            try:
+                song = CartiCatalog.objects.get(id=item['song'])
+                most_liked_data.append({
+                    'song': song,
+                    'count': item['like_count']
+                })
+            except CartiCatalog.DoesNotExist:
+                continue
+        
+        # Most bookmarked songs
+        most_bookmarked_songs = SongBookmark.objects.values('song').annotate(
+            bookmark_count=Count('id')
+        ).order_by('-bookmark_count')[:10]
+        
+        # Convert to a list of songs with counts
+        most_bookmarked_data = []
+        for item in most_bookmarked_songs:
+            try:
+                song = CartiCatalog.objects.get(id=item['song'])
+                most_bookmarked_data.append({
+                    'song': song,
+                    'count': item['bookmark_count']
+                })
+            except CartiCatalog.DoesNotExist:
+                continue
+        
+        # Popular song pairs (songs frequently liked together)
+        song_pair_data = []
+        # Get the top 50 most liked songs to analyze
+        top_songs = [item['song'] for item in most_liked_songs[:50]]
+        
+        # For each top song, find songs commonly liked by the same users
+        for song_id in top_songs[:5]:  # Limit to 5 to avoid excessive processing
+            try:
+                source_song = CartiCatalog.objects.get(id=song_id)
+                
+                # Find users who liked this song
+                users_who_liked = SongVote.objects.filter(
+                    song_id=song_id, 
+                    vote_type='like'
+                ).values_list('client_identifier', flat=True)
+                
+                # Find other songs these users also liked
+                if users_who_liked:
+                    related_song_likes = SongVote.objects.filter(
+                        client_identifier__in=users_who_liked,
+                        vote_type='like'
+                    ).exclude(
+                        song_id=song_id
+                    ).values('song').annotate(
+                        count=Count('song')
+                    ).order_by('-count')[:5]
+                    
+                    # Add to our results
+                    song_pairs = []
+                    for item in related_song_likes:
+                        try:
+                            related_song = CartiCatalog.objects.get(id=item['song'])
+                            song_pairs.append({
+                                'song': related_song,
+                                'count': item['count']
+                            })
+                        except CartiCatalog.DoesNotExist:
+                            continue
+                    
+                    if song_pairs:
+                        song_pair_data.append({
+                            'source_song': source_song,
+                            'related_songs': song_pairs
+                        })
+            except CartiCatalog.DoesNotExist:
+                continue
+        
+        # Prepare context for the template
+        context = {
+            'title': 'Recommendation Insights',
+            'most_liked_data': most_liked_data,
+            'most_bookmarked_data': most_bookmarked_data,
+            'song_pair_data': song_pair_data,
+        }
+        
+        # Merge with any existing context
+        if extra_context:
+            context.update(extra_context)
+            
+        return super().changelist_view(request, context)
+
+# Register the recommendation insights admin
+admin.site.register(RecommendationInsights, RecommendationInsightsAdmin)

@@ -704,6 +704,16 @@ class SongVote(models.Model):
         
     def __str__(self):
         return f"{self.vote_type} for {self.song} by {self.ip_address}"
+        
+
+# Proxy model for recommendation insights admin
+class RecommendationInsights(SongVote):
+    """Proxy model to provide recommendation insights in admin"""
+    class Meta:
+        proxy = True
+        verbose_name = 'Recommendation Insights'
+        verbose_name_plural = 'Recommendation Insights'
+
 
 class HomepageSettings(models.Model):
     """Model to manage which songs appear on the homepage."""

@@ -1,0 +1,164 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" type="text/css" href="{% static "admin/css/changelists.css" %}" />
+  <style>
+    .insights-section {
+      margin-bottom: 30px;
+      border: 1px solid #eaeaea;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .insights-section h2 {
+      background: #f8f8f8;
+      padding: 10px 15px;
+      margin: 0;
+      font-size: 16px;
+      border-bottom: 1px solid #eaeaea;
+    }
+    .insights-content {
+      padding: 15px;
+    }
+    .insights-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .insights-table th, .insights-table td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #eaeaea;
+    }
+    .insights-table th {
+      background: #f1f1f1;
+      font-weight: bold;
+    }
+    .count-cell {
+      text-align: center;
+      width: 80px;
+    }
+    .pair-section {
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed #eaeaea;
+    }
+    .pair-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    .pair-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .related-songs {
+      margin-left: 20px;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <div class="module" id="changelist">
+    <div class="insights-section">
+      <h2>Song Recommendation Analysis</h2>
+      <div class="insights-content">
+        <p>This dashboard provides insights into song recommendation patterns based on user interactions.</p>
+        <p>The data shown here helps understand user preferences and is used to generate personalized recommendations.</p>
+      </div>
+    </div>
+
+    <!-- Most Liked Songs -->
+    <div class="insights-section">
+      <h2>Most Liked Songs</h2>
+      <div class="insights-content">
+        {% if most_liked_data %}
+          <table class="insights-table">
+            <thead>
+              <tr>
+                <th>Song</th>
+                <th>Era</th>
+                <th class="count-cell">Like Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in most_liked_data %}
+                <tr>
+                  <td>{{ item.song.name }}</td>
+                  <td>{{ item.song.era }}</td>
+                  <td class="count-cell">{{ item.count }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="empty-message">No like data available yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Most Bookmarked Songs -->
+    <div class="insights-section">
+      <h2>Most Bookmarked Songs</h2>
+      <div class="insights-content">
+        {% if most_bookmarked_data %}
+          <table class="insights-table">
+            <thead>
+              <tr>
+                <th>Song</th>
+                <th>Era</th>
+                <th class="count-cell">Bookmark Count</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in most_bookmarked_data %}
+                <tr>
+                  <td>{{ item.song.name }}</td>
+                  <td>{{ item.song.era }}</td>
+                  <td class="count-cell">{{ item.count }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="empty-message">No bookmark data available yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Song Pairs (Collaborative Filtering Insights) -->
+    <div class="insights-section">
+      <h2>Song Pairs (Users who liked X also liked Y)</h2>
+      <div class="insights-content">
+        {% if song_pair_data %}
+          {% for pair in song_pair_data %}
+            <div class="pair-section">
+              <div class="pair-title">Users who liked "{{ pair.source_song.name }}" ({{ pair.source_song.era }}) also liked:</div>
+              <table class="insights-table related-songs">
+                <thead>
+                  <tr>
+                    <th>Song</th>
+                    <th>Era</th>
+                    <th class="count-cell">Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for related in pair.related_songs %}
+                    <tr>
+                      <td>{{ related.song.name }}</td>
+                      <td>{{ related.song.era }}</td>
+                      <td class="count-cell">{{ related.count }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="empty-message">No song pair data available yet. This requires multiple users to like related songs.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

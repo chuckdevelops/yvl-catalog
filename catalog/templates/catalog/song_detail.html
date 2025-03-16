@@ -124,19 +124,25 @@
                 </div>
                 
                 <div class="col-md-4">
-                    <!-- Similar Songs -->
+                    <!-- Recommended Songs -->
                     <div class="card mb-4">
-                        <div class="card-header">
-                            <h5>Similar Songs</h5>
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Recommended Songs</h5>
+                            <span class="small text-muted" data-bs-toggle="tooltip" title="Based on what other users with similar taste have enjoyed">
+                                <i class="fas fa-info-circle"></i>
+                            </span>
                         </div>
                         <div class="card-body">
                             <div class="list-group">
-                                {% for related in related_songs %}
-                                <a href="{% url 'catalog:song_detail' song_id=related.id %}" class="list-group-item list-group-item-action">
-                                    {{ related.name }}
+                                {% for recommended in recommended_songs %}
+                                <a href="{% url 'catalog:song_detail' song_id=recommended.id %}" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ recommended.name }}</h6>
+                                        <small>{{ recommended.era }}</small>
+                                    </div>
                                 </a>
                                 {% empty %}
-                                <p class="text-muted">No related songs found.</p>
+                                <p class="text-muted">No recommended songs found.</p>
                                 {% endfor %}
                             </div>
                         </div>
@@ -206,6 +212,10 @@
         const collectionNameInput = document.getElementById('collection-name');
         const collectionBannersContainer = document.getElementById('collection-banners');
         const viewBookmarksLink = document.getElementById('view-bookmarks-link');
+        
+        // Initialize tooltips
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
         
         // Check localStorage for saved votes and pre-set button state
         function checkSavedVotes() {

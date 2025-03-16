@@ -1,5 +1,6 @@
 {% extends 'catalog/base.html' %}
 {% load catalog_filters %}
+{% load static %}
 
 {% block title %}Playboi Carti Media Hub{% endblock %}
 
@@ -15,7 +16,7 @@
             <div class="col-md-6 col-lg-3 mb-4">
                 <div class="card h-100">
                     <div class="card-body text-center">
-                        <i class="fas fa-images fa-4x mb-3 text-primary"></i>
+                        <img src="{% static 'catalog/img/media/omerta.png' %}" alt="Art" class="img-fluid mb-3" style="max-height: 170px;">
                         <h2 class="card-title">Art</h2>
                         <p class="card-text">Album covers, single art, and other visual artwork</p>
                         <div class="d-flex justify-content-between align-items-center">
@@ -32,7 +33,7 @@
             <div class="col-md-6 col-lg-3 mb-4">
                 <div class="card h-100">
                     <div class="card-body text-center">
-                        <i class="fas fa-microphone-alt fa-4x mb-3 text-primary"></i>
+                        <img src="{% static 'catalog/img/media/test.webp' %}" alt="Interviews" class="img-fluid mb-3" style="max-height: 170px;">
                         <h2 class="card-title">Interviews</h2>
                         <p class="card-text">Magazine, online, and video interviews</p>
                         <div class="d-flex justify-content-between align-items-center">
@@ -49,7 +50,7 @@
             <div class="col-md-6 col-lg-3 mb-4">
                 <div class="card h-100">
                     <div class="card-body text-center">
-                        <i class="fas fa-tshirt fa-4x mb-3 text-primary"></i>
+                        <img src="{% static 'catalog/img/media/fit.jpeg' %}" alt="Fit Pics" class="img-fluid mb-3" style="max-height: 170px;">
                         <h2 class="card-title">Fit Pics</h2>
                         <p class="card-text">Fashion photos and outfit inspirations</p>
                         <div class="d-flex justify-content-between align-items-center">
@@ -66,7 +67,7 @@
             <div class="col-md-6 col-lg-3 mb-4">
                 <div class="card h-100">
                     <div class="card-body text-center">
-                        <i class="fas fa-hashtag fa-4x mb-3 text-primary"></i>
+                        <img src="{% static 'catalog/img/media/media.jpg' %}" alt="Social Media" class="img-fluid mb-3" style="max-height: 170px;">
                         <h2 class="card-title">Social Media</h2>
                         <p class="card-text">Notable tweets, Instagram posts, and more</p>
                         <div class="d-flex justify-content-between align-items-center">

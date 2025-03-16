@@ -6,7 +6,8 @@ from django.template.defaulttags import register
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 import re
-from .models import CartiCatalog, SheetTab, SongMetadata, SongVote, HomepageSettings, ArtMedia, Interview, FitPic, SocialMedia
+from .models import CartiCatalog, SheetTab, SongMetadata, SongVote, HomepageSettings, ArtMedia, Interview, FitPic, SocialMedia, SongBookmark, ClientIdentifier
+from .utils import get_client_ip, check_and_update_client, generate_client_hash
 
 # Add template filter to get items from a list by index
 @register.filter
@@ -1084,8 +1085,91 @@ def song_detail(request, song_id):
         id=song_id
     )
     
-    # Get songs from the same era for recommendations
-    related_songs = CartiCatalog.objects.filter(era=song.era).exclude(id=song.id)[:5]
+    # Get recommended songs based on collaborative filtering
+    from django.db.models import Count, Q
+    
+    # Get current client identifier if available
+    client = None
+    client_hash = None
+    try:
+        client_hash = generate_client_hash(request)
+        client, _ = ClientIdentifier.objects.get_or_create(client_hash=client_hash)
+    except Exception:
+        pass
+    
+    # 1. Find users who liked this song
+    users_who_liked = SongVote.objects.filter(song=song, vote_type='like').values_list('client_identifier', flat=True)
+    
+    # 2. Find users who bookmarked this song
+    users_who_bookmarked = SongBookmark.objects.filter(song=song).values_list('client_identifier', flat=True)
+    
+    # Combine users who showed interest in this song
+    interested_users = list(set(list(users_who_liked) + list(users_who_bookmarked)))
+    
+    # 3. Find what songs these users also liked or bookmarked
+    song_scores = {}
+    
+    # Add songs these users liked
+    for vote in SongVote.objects.filter(
+        client_identifier__in=interested_users, 
+        vote_type='like'
+    ).exclude(song=song):
+        if vote.song_id not in song_scores:
+            song_scores[vote.song_id] = 0
+        song_scores[vote.song_id] += 1
+    
+    # Add songs these users bookmarked (with higher weight)
+    for bookmark in SongBookmark.objects.filter(
+        client_identifier__in=interested_users
+    ).exclude(song=song):
+        if bookmark.song_id not in song_scores:
+            song_scores[bookmark.song_id] = 0
+        song_scores[bookmark.song_id] += 2  # Bookmarks count double
+    
+    # Sort songs by score (highest first)
+    sorted_song_ids = sorted(song_scores.items(), key=lambda x: x[1], reverse=True)
+    recommended_ids = [song_id for song_id, score in sorted_song_ids]
+    
+    # Get the recommended songs
+    if recommended_ids:
+        # Use a Case/When to preserve the order from our scores
+        from django.db.models import Case, When
+        preserved_order = Case(*[When(id=id, then=pos) for pos, id in enumerate(recommended_ids)])
+        recommended_songs = CartiCatalog.objects.filter(id__in=recommended_ids).order_by(preserved_order)
+    else:
+        recommended_songs = CartiCatalog.objects.none()
+    
+    # If we don't have enough recommendations, add songs from the same era
+    if recommended_songs.count() < 5:
+        # Get other songs from the same era and same primary tab
+        try:
+            primary_tab = song.metadata.sheet_tab if hasattr(song, 'metadata') and song.metadata else None
+            era_songs = CartiCatalog.objects.filter(era=song.era).exclude(id=song.id)
+            
+            # Add similar tab songs first if available
+            if primary_tab:
+                tab_era_songs = era_songs.filter(metadata__sheet_tab=primary_tab)
+                # Add songs from same tab and era if any available
+                existing_ids = set(recommended_songs.values_list('id', flat=True))
+                for era_song in tab_era_songs:
+                    if era_song.id not in existing_ids and recommended_songs.count() < 5:
+                        recommended_songs = recommended_songs | CartiCatalog.objects.filter(id=era_song.id)
+            
+            # If still not enough, add more from the same era
+            existing_ids = set(recommended_songs.values_list('id', flat=True))
+            for era_song in era_songs:
+                if era_song.id not in existing_ids and recommended_songs.count() < 5:
+                    recommended_songs = recommended_songs | CartiCatalog.objects.filter(id=era_song.id)
+        except Exception as e:
+            # If any error occurs, fall back to basic era recommendations
+            existing_ids = set(recommended_songs.values_list('id', flat=True))
+            era_songs = CartiCatalog.objects.filter(era=song.era).exclude(id=song.id)
+            for era_song in era_songs:
+                if era_song.id not in existing_ids and recommended_songs.count() < 5:
+                    recommended_songs = recommended_songs | CartiCatalog.objects.filter(id=era_song.id)
+    
+    # Limit to 5 songs
+    recommended_songs = recommended_songs[:5]
     
     # Get vote counts
     like_count = SongVote.objects.filter(song=song, vote_type='like').count()
@@ -1303,15 +1387,13 @@ def song_detail(request, song_id):
     
     context = {
         'song': song,
-        'related_songs': related_songs,
+        'recommended_songs': recommended_songs,
         'album_related_songs': album_related_songs,
         'like_count': like_count,
         'dislike_count': dislike_count,
         'user_vote': user_vote,
     }
     return render(request, 'catalog/song_detail.html', context)
-    
-from .utils import get_client_ip, check_and_update_client
 
 @require_POST
 def vote_song(request, song_id):
