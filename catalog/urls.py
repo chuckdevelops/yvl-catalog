@@ -13,4 +13,5 @@ urlpatterns = [
     path('media/interviews/', views.interviews_page, name='interviews'),
     path('media/fit-pics/', views.fit_pics_page, name='fit_pics'),
     path('media/social-media/', views.social_media_page, name='social_media'),
+    path('coming-soon/', views.coming_soon, name='coming_soon'),
 ]

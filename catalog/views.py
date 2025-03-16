@@ -6,7 +6,7 @@ from django.template.defaulttags import register
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 import re
-from .models import CartiCatalog, SheetTab, SongMetadata, SongVote, HomepageSettings
+from .models import CartiCatalog, SheetTab, SongMetadata, SongVote, HomepageSettings, ArtMedia, Interview, FitPic, SocialMedia
 
 # Add template filter to get items from a list by index
 @register.filter
@@ -1333,3 +1333,7 @@ def vote_song(request, song_id):
         
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+def coming_soon(request):
+    """Coming soon page"""
+    return render(request, 'catalog/coming_soon.html')

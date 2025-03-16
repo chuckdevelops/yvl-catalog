@@ -1,0 +1,1 @@
+/* You need to obtain the actual HelveticaLTStd-BoldCond font file from Adobe or another licensed source */
