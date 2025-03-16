@@ -22,9 +22,36 @@ def index(request):
     song_count = CartiCatalog.objects.distinct().count()
     era_count = CartiCatalog.objects.values('era').distinct().count()
     
-    # Check if we have custom homepage settings enabled
+    # Get homepage settings
+    homepage_settings = HomepageSettings.objects.first()
+    
+    # Get songs for the Recently Leaked section (sidebar)
     try:
-        homepage_settings = HomepageSettings.objects.first()
+        if homepage_settings and homepage_settings.enable_custom_recently_leaked:
+            # Use the custom Recently Leaked songs (max 5)
+            recently_leaked = homepage_settings.recently_leaked_songs.select_related('metadata__sheet_tab')\
+                .prefetch_related('categories__sheet_tab').all()[:5]
+            if recently_leaked.exists():
+                # Convert to list as we're using a limited QuerySet
+                recently_leaked = list(recently_leaked)
+            else:
+                # Fall back to default behavior if no songs selected
+                raise HomepageSettings.DoesNotExist()
+        else:
+            # Fall back to default behavior if custom setting not enabled
+            raise HomepageSettings.DoesNotExist()
+    except (HomepageSettings.DoesNotExist, AttributeError):
+        # Default: Get most recent leak songs (sort by leak_date)
+        recently_leaked = CartiCatalog.objects.filter(
+            Q(leak_date__isnull=False) & ~Q(leak_date='')
+        ).order_by('-leak_date')[:5]
+        
+        # If no recent leaks found, fall back to ID order
+        if not recently_leaked.exists():
+            recently_leaked = CartiCatalog.objects.all().order_by('-id')[:5]
+    
+    # Get songs for the main Recent Songs section (bottom of page)
+    try:
         if homepage_settings and homepage_settings.enable_custom_homepage:
             # Use the custom homepage songs (max 10)
             recent_songs = homepage_settings.homepage_songs.select_related('metadata__sheet_tab')\
@@ -168,10 +195,27 @@ def index(request):
         reverse=True
     )[:5]
     
+    # Also add sheet tab info to the recently leaked songs
+    for song in recently_leaked:
+        try:
+            song.primary_tab_name = song.metadata.sheet_tab.name if hasattr(song, 'metadata') and song.metadata and song.metadata.sheet_tab else "Unknown"
+            song.subsection_name = song.metadata.subsection if hasattr(song, 'metadata') and song.metadata and song.metadata.subsection else None
+        except (SongMetadata.DoesNotExist, AttributeError):
+            song.primary_tab_name = "Unknown"
+            song.subsection_name = None
+            
+        # Get secondary categories/tabs
+        try:
+            secondary_tabs = [category.sheet_tab for category in song.categories.all()]
+            song.secondary_tab_names = [tab.name for tab in secondary_tabs]
+        except Exception:
+            song.secondary_tab_names = []
+    
     context = {
         'song_count': song_count,
         'era_count': era_count,
         'recent_songs': recent_songs,
+        'recently_leaked': recently_leaked,
         'popular_tabs': popular_tabs,
     }
     return render(request, 'catalog/index.html', context)
@@ -1267,25 +1311,43 @@ def song_detail(request, song_id):
     }
     return render(request, 'catalog/song_detail.html', context)
     
-def get_client_ip(request):
-    """Get the client's IP address from the request."""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
-    else:
-        ip = request.META.get('REMOTE_ADDR')
-    return ip
+from .utils import get_client_ip, check_and_update_client
 
 @require_POST
 def vote_song(request, song_id):
-    """Handle song voting (like/dislike)"""
+    """Handle song voting with protection against multiple votes"""
     song = get_object_or_404(CartiCatalog, id=song_id)
     vote_type = request.POST.get('vote_type')
     
     if vote_type not in ['like', 'dislike']:
         return JsonResponse({'status': 'error', 'message': 'Invalid vote type'}, status=400)
     
-    # Get user's IP address
+    # Check client fingerprint and rate limits
+    client, time_since_last_vote = check_and_update_client(request)
+    
+    # Check if client is voting too frequently
+    if time_since_last_vote and time_since_last_vote.total_seconds() < 3:
+        return JsonResponse({
+            'status': 'error', 
+            'message': 'Please wait before voting again'
+        }, status=429)
+    
+    # Check if client has too many votes overall for the day
+    MAX_VOTES_PER_DAY = 50
+    from django.utils import timezone
+    from django.db.models import Q
+    votes_today = SongVote.objects.filter(
+        Q(client_identifier=client.client_hash) &
+        Q(created_at__date=timezone.now().date())
+    ).count()
+    
+    if votes_today >= MAX_VOTES_PER_DAY:
+        return JsonResponse({
+            'status': 'error', 
+            'message': 'Daily voting limit reached'
+        }, status=429)
+    
+    # Get user's IP address as secondary identifier
     ip_address = get_client_ip(request)
     session_key = request.session.session_key
     
@@ -1296,11 +1358,14 @@ def vote_song(request, song_id):
     
     try:
         with transaction.atomic():
-            # Check if user has already voted
+            # Check if client has already voted on this song
             try:
-                existing_vote = SongVote.objects.get(song=song, ip_address=ip_address)
+                existing_vote = SongVote.objects.get(
+                    song=song, 
+                    client_identifier=client.client_hash
+                )
                 
-                # If user is changing their vote
+                # If client is changing their vote
                 if existing_vote.vote_type != vote_type:
                     existing_vote.vote_type = vote_type
                     existing_vote.save()
@@ -1310,19 +1375,26 @@ def vote_song(request, song_id):
                     existing_vote.delete()
                     message = "Vote removed"
             except SongVote.DoesNotExist:
-                # Create a new vote
+                # Create a new vote with client identifier
                 SongVote.objects.create(
                     song=song,
                     ip_address=ip_address,
                     session_key=session_key,
+                    client_identifier=client.client_hash,
                     vote_type=vote_type
                 )
                 message = f"Thanks for your {vote_type}!"
+            
+            # Update the client's voting stats
+            client.vote_count += 1
+            client.last_vote_time = timezone.now()
+            client.save()
                 
         # Get updated vote counts
         like_count = SongVote.objects.filter(song=song, vote_type='like').count()
         dislike_count = SongVote.objects.filter(song=song, vote_type='dislike').count()
         
+        # Send the client's vote to store in localStorage
         return JsonResponse({
             'status': 'success',
             'message': message,
@@ -1337,3 +1409,120 @@ def vote_song(request, song_id):
 def coming_soon(request):
     """Coming soon page"""
     return render(request, 'catalog/coming_soon.html')
+
+
+# Bookmark functionality
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST, require_GET
+from .models import SongBookmark
+
+@require_POST
+def bookmark_song(request, song_id):
+    """Handle song bookmarking with client identification"""
+    song = get_object_or_404(CartiCatalog, id=song_id)
+    collection_name = request.POST.get('collection_name', 'My Collection')
+    action = request.POST.get('action', 'add')  # Options: add, remove
+    
+    # Get client identifier using same fingerprinting as votes
+    client, _ = check_and_update_client(request)
+    
+    if action == 'add':
+        # Create bookmark if it doesn't exist
+        bookmark, created = SongBookmark.objects.get_or_create(
+            song=song,
+            client_identifier=client.client_hash,
+            collection_name=collection_name
+        )
+        message = "Song bookmarked" if created else "Song already in collection"
+    elif action == 'remove':
+        # Remove bookmark if it exists
+        try:
+            bookmark = SongBookmark.objects.get(
+                song=song,
+                client_identifier=client.client_hash,
+                collection_name=collection_name
+            )
+            bookmark.delete()
+            message = "Bookmark removed"
+        except SongBookmark.DoesNotExist:
+            message = "Bookmark not found"
+    else:
+        return JsonResponse({"status": "error", "message": "Invalid action"}, status=400)
+    
+    # Return updated list of collections this song is in for this user
+    collections = SongBookmark.objects.filter(
+        song=song,
+        client_identifier=client.client_hash
+    ).values_list('collection_name', flat=True)
+    
+    return JsonResponse({
+        "status": "success",
+        "message": message,
+        "collections": list(collections),
+        "song_id": song_id
+    })
+
+@require_GET
+def get_bookmarks(request):
+    """Get all bookmarked songs for the current client"""
+    # Get client identifier using same fingerprinting as votes
+    client, _ = check_and_update_client(request)
+    collection_name = request.GET.get('collection', None)
+    
+    # Build query for bookmarks
+    bookmarks_query = SongBookmark.objects.filter(client_identifier=client.client_hash)
+    
+    # Filter by collection if specified
+    if collection_name:
+        bookmarks_query = bookmarks_query.filter(collection_name=collection_name)
+    
+    # Get bookmarked songs with details
+    bookmarks = bookmarks_query.select_related('song', 'song__metadata__sheet_tab')\
+                               .order_by('-created_at')
+    
+    # Prepare data for JSON response
+    songs_data = []
+    for bookmark in bookmarks:
+        song = bookmark.song
+        # Add basic song details
+        song_data = {
+            "id": song.id,
+            "name": song.name,
+            "era": song.era,
+            "collection": bookmark.collection_name,
+            "bookmarked_at": bookmark.created_at.isoformat(),
+        }
+        
+        # Add metadata if available
+        try:
+            if song.metadata and song.metadata.sheet_tab:
+                song_data["primary_tab"] = song.metadata.sheet_tab.name
+                song_data["subsection"] = song.metadata.subsection
+        except (SongMetadata.DoesNotExist, AttributeError):
+            pass
+            
+        songs_data.append(song_data)
+    
+    return JsonResponse({
+        "status": "success",
+        "count": len(songs_data),
+        "bookmarks": songs_data
+    })
+
+@require_GET
+def get_collections(request):
+    """Get all collections for the current client"""
+    # Get client identifier using same fingerprinting as votes
+    client, _ = check_and_update_client(request)
+    
+    # Get distinct collections with counts
+    from django.db.models import Count
+    collections = SongBookmark.objects.filter(client_identifier=client.client_hash)\
+                                     .values('collection_name')\
+                                     .annotate(count=Count('id'))\
+                                     .order_by('collection_name')
+    
+    return JsonResponse({
+        "status": "success",
+        "collections": list(collections)
+    })

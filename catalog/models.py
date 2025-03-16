@@ -666,11 +666,31 @@ class SocialMedia(models.Model):
             return platform_icons[self.platform]
         return 'https://placehold.co/400x400?text=Social+Media'
         
+class ClientIdentifier(models.Model):
+    """Tracks unique user identifiers to prevent vote manipulation"""
+    # Unique identifier from client
+    client_hash = models.CharField(max_length=64, unique=True, db_index=True,
+                             help_text="Hashed identifier for the client")
+    # When the identifier was first seen
+    first_seen = models.DateTimeField(auto_now_add=True)
+    last_seen = models.DateTimeField(auto_now=True)
+    # Voting stats
+    vote_count = models.PositiveIntegerField(default=0)
+    last_vote_time = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        verbose_name = "Client Identifier"
+        verbose_name_plural = "Client Identifiers"
+        
+    def __str__(self):
+        return f"Client {self.id}: {self.vote_count} votes"
+
 class SongVote(models.Model):
     """Model to track user votes (likes/dislikes) for songs."""
     song = models.ForeignKey('CartiCatalog', on_delete=models.CASCADE, related_name='votes')
     ip_address = models.GenericIPAddressField(help_text="IP address of the voter for preventing duplicate votes")
     session_key = models.CharField(max_length=40, blank=True, null=True, help_text="Session key to track votes")
+    client_identifier = models.CharField(max_length=64, db_index=True, help_text="Hashed client identifier", null=True, blank=True)
     vote_type = models.CharField(max_length=10, choices=[('like', 'Like'), ('dislike', 'Dislike')])
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -679,18 +699,26 @@ class SongVote(models.Model):
         db_table = 'song_vote'
         verbose_name = 'Song Vote'
         verbose_name_plural = 'Song Votes'
-        # Ensure each IP can only vote once per song
-        unique_together = ('song', 'ip_address')
+        # Ensure each client can only vote once per song
+        unique_together = ('song', 'client_identifier')
         
     def __str__(self):
         return f"{self.vote_type} for {self.song} by {self.ip_address}"
 
 class HomepageSettings(models.Model):
     """Model to manage which songs appear on the homepage."""
+    # Recent tab settings
     enable_custom_homepage = models.BooleanField(default=False, 
         help_text="When enabled, the homepage will use the songs selected below instead of the Recent tab")
     homepage_songs = models.ManyToManyField(CartiCatalog, blank=True, related_name='homepage_displays',
-        help_text="Select songs to display on the homepage (max 10 will be used)")
+        help_text="Select songs to display in the main Recent Songs section (max 10 will be used)")
+    
+    # Recently Leaked settings
+    enable_custom_recently_leaked = models.BooleanField(default=False,
+        help_text="When enabled, the Recently Leaked section will use the songs selected below instead of the most recent leaks")
+    recently_leaked_songs = models.ManyToManyField(CartiCatalog, blank=True, related_name='recently_leaked_displays',
+        help_text="Select songs to display in the Recently Leaked section (max 5 will be used)")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -701,8 +729,9 @@ class HomepageSettings(models.Model):
         verbose_name_plural = 'Homepage Settings'
     
     def __str__(self):
-        song_count = self.homepage_songs.count() if self.pk else 0
-        return f"Homepage Settings ({song_count} songs) - Updated: {self.updated_at.strftime('%Y-%m-%d %H:%M')}" if self.pk else "New Homepage Settings"
+        homepage_count = self.homepage_songs.count() if self.pk else 0
+        recently_leaked_count = self.recently_leaked_songs.count() if self.pk else 0
+        return f"Homepage Settings (Recent: {homepage_count}, Recently Leaked: {recently_leaked_count}) - Updated: {self.updated_at.strftime('%Y-%m-%d %H:%M')}" if self.pk else "New Homepage Settings"
     
     def save(self, *args, **kwargs):
         # Ensure we only have one instance of settings
@@ -710,3 +739,23 @@ class HomepageSettings(models.Model):
             # Don't create a new one if one already exists
             return HomepageSettings.objects.first()
         return super().save(*args, **kwargs)
+
+class SongBookmark(models.Model):
+    """Model to track user song bookmarks (saved tracks)"""
+    client_identifier = models.CharField(max_length=64, db_index=True, 
+                                        help_text="Client hash identifier to track user bookmarks")
+    song = models.ForeignKey(CartiCatalog, on_delete=models.CASCADE, related_name='bookmarks')
+    collection_name = models.CharField(max_length=100, default="My Collection",
+                                     help_text="Custom collection name for organizing bookmarks")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        managed = True
+        db_table = 'song_bookmark'
+        verbose_name = 'Song Bookmark'
+        verbose_name_plural = 'Song Bookmarks'
+        # Allow multiple bookmarks from same user, but ensure song is only in a specific collection once
+        unique_together = ('client_identifier', 'song', 'collection_name')
+        
+    def __str__(self):
+        return f"Bookmark: {self.song} in '{self.collection_name}' by {self.client_identifier[:8]}..."

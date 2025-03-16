@@ -1,4 +1,5 @@
 {% extends 'catalog/base.html' %}
+{% load catalog_filters %}
 
 {% block title %}{{ song.name }} | Playboi Carti Catalog{% endblock %}
 
@@ -94,12 +95,12 @@
                             <td>{% if song.leak_date and song.leak_date != "NaN" and song.leak_date != "nan" %}{{ song.leak_date }}{% else %}<em></em>{% endif %}</td>
                         </tr>
                         <tr>
-                            <th>File Date:</th>
+                            <th>File:</th>
                             <td>{% if song.file_date and song.file_date != "NaN" and song.file_date != "nan" %}{{ song.file_date }}{% else %}<em></em>{% endif %}</td>
                         </tr>
                         <tr>
                             <th>Available Length:</th>
-                            <td>{% if song.available_length and song.available_length != "NaN" and song.available_length != "nan" %}{{ song.available_length }}{% else %}<em></em>{% endif %}</td>
+                            <td>{% if song.available_length and song.available_length != "NaN" and song.available_length != "nan" %}{{ song.available_length|remove_urls }}{% else %}<em></em>{% endif %}</td>
                         </tr>
                     </table>
 
@@ -142,7 +143,7 @@
                     </div>
                     
                     <!-- Voting Card -->
-                    <div class="card">
+                    <div class="card mb-4">
                         <div class="card-body">
                             <div class="row text-center" id="voting-section">
                                 <div class="col-6">
@@ -162,6 +163,32 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Bookmark Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Bookmark Song</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Banner display (shows which collections this song is in) -->
+                            <div id="collection-banners" class="mb-3"></div>
+                            
+                            <!-- Bookmark form -->
+                            <div class="input-group mb-3">
+                                <input type="text" id="collection-name" class="form-control" placeholder="Collection name" value="My Collection">
+                                <button id="bookmark-btn" class="btn btn-primary" data-song-id="{{ song.id }}">
+                                    <i class="fas fa-bookmark"></i> Save
+                                </button>
+                            </div>
+                            
+                            <!-- Link to view all bookmarks -->
+                            <div class="text-center mt-3">
+                                <a href="#" id="view-bookmarks-link" class="text-decoration-none">
+                                    <small>View all your bookmarks</small>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -171,9 +198,49 @@
 
 {% block scripts %}
 <script>
+    // Fixed event listener - correctly spelled DOMContentLoaded
     document.addEventListener('DOMContentLoaded', function() {
+        const songId = "{{ song.id }}";
         const voteButtons = document.querySelectorAll('#like-btn, #dislike-btn');
+        const bookmarkBtn = document.getElementById('bookmark-btn');
+        const collectionNameInput = document.getElementById('collection-name');
+        const collectionBannersContainer = document.getElementById('collection-banners');
+        const viewBookmarksLink = document.getElementById('view-bookmarks-link');
         
+        // Check localStorage for saved votes and pre-set button state
+        function checkSavedVotes() {
+            // Get saved votes from localStorage
+            const savedVotes = JSON.parse(localStorage.getItem('cartiCatalogVotes') || '{}');
+            
+            // If this song has a saved vote, update UI
+            if (savedVotes[songId]) {
+                const savedVoteType = savedVotes[songId];
+                
+                // Pre-select the right button (if server didn't already set it)
+                if (!document.querySelector('.btn.active')) {
+                    document.querySelector(`#${savedVoteType}-btn`).classList.add('active');
+                }
+            }
+        }
+        
+        // Save vote to localStorage
+        function saveVoteToLocalStorage(songId, voteType) {
+            // Get existing votes or initialize empty object
+            const savedVotes = JSON.parse(localStorage.getItem('cartiCatalogVotes') || '{}');
+            
+            if (voteType === null) {
+                // If vote was removed, delete from localStorage
+                delete savedVotes[songId];
+            } else {
+                // Update with new vote
+                savedVotes[songId] = voteType;
+            }
+            
+            // Save back to localStorage
+            localStorage.setItem('cartiCatalogVotes', JSON.stringify(savedVotes));
+        }
+        
+        // Handle vote button clicks
         voteButtons.forEach(button => {
             button.addEventListener('click', function() {
                 const songId = this.dataset.songId;
@@ -200,6 +267,12 @@
                         // Update active state of buttons
                         document.getElementById('like-btn').classList.toggle('active', data.user_vote === 'like');
                         document.getElementById('dislike-btn').classList.toggle('active', data.user_vote === 'dislike');
+                        
+                        // Save to localStorage
+                        saveVoteToLocalStorage(songId, data.user_vote);
+                    } else if (data.status === 'error') {
+                        // Show error message
+                        alert(data.message);
                     }
                 })
                 .catch(error => {
@@ -207,6 +280,340 @@
                 });
             });
         });
+        
+        // ----- BOOKMARKS FUNCTIONALITY -----
+        
+        // Check localStorage for existing bookmarks
+        function checkSavedBookmarks() {
+            // Get bookmarks data from server for this song
+            fetch(`/bookmarks/?song_id=${songId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateCollectionBanners(data.collections || []);
+                }
+            })
+            .catch(error => {
+                console.error('Error checking bookmarks:', error);
+            });
+        }
+        
+        // Create banner for each collection
+        function updateCollectionBanners(collections) {
+            // Clear current banners
+            collectionBannersContainer.innerHTML = '';
+            
+            if (collections.length === 0) {
+                collectionBannersContainer.innerHTML = '<span class="text-muted">Not in any collection yet</span>';
+                return;
+            }
+            
+            // Add collection banners
+            collections.forEach(collection => {
+                const banner = document.createElement('div');
+                banner.className = 'badge bg-info me-2 mb-2 p-2 d-inline-flex align-items-center';
+                banner.innerHTML = `
+                    <span>${collection}</span>
+                    <button type="button" class="ms-2 p-1 rounded-circle bg-danger text-white border-0" 
+                        style="width: 16px; height: 16px; font-size: 10px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;"
+                        aria-label="Remove from ${collection}" 
+                        data-collection="${collection}">
+                        ✕
+                    </button>
+                `;
+                collectionBannersContainer.appendChild(banner);
+                
+                // Add remove handler to the close button
+                const closeBtn = banner.querySelector('button');
+                closeBtn.addEventListener('click', function() {
+                    removeFromCollection(this.dataset.collection);
+                });
+            });
+        }
+        
+        // Handle bookmark button click
+        if (bookmarkBtn) {
+            bookmarkBtn.addEventListener('click', function() {
+                const songId = this.dataset.songId;
+                const collectionName = collectionNameInput.value.trim() || 'My Collection';
+                
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('collection_name', collectionName);
+                formData.append('action', 'add');
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                
+                // Send bookmark to server
+                fetch(`/songs/${songId}/bookmark/`, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Update collection banners
+                        updateCollectionBanners(data.collections);
+                        // Clear the input after successful add
+                        collectionNameInput.value = '';
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            });
+        }
+        
+        // Remove from collection
+        function removeFromCollection(collectionName) {
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('collection_name', collectionName);
+            formData.append('action', 'remove');
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            
+            // Send remove request to server
+            fetch(`/songs/${songId}/bookmark/`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update collection banners
+                    updateCollectionBanners(data.collections);
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+        
+        // Set up view bookmarks link
+        if (viewBookmarksLink) {
+            viewBookmarksLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Open a modal or redirect to a bookmarks page
+                // For simplicity, we'll create a basic modal with bookmarks
+                showBookmarksModal();
+            });
+        }
+        
+        // Create and show bookmarks modal
+        function showBookmarksModal() {
+            // Create modal container if it doesn't exist
+            let modal = document.getElementById('bookmarks-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'bookmarks-modal';
+                modal.className = 'modal fade';
+                modal.setAttribute('tabindex', '-1');
+                modal.innerHTML = `
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Your Bookmarked Songs</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <select id="collection-filter" class="form-select">
+                                        <option value="">All Collections</option>
+                                    </select>
+                                </div>
+                                <div id="bookmarks-list" class="list-group">
+                                    <div class="text-center">
+                                        <div class="spinner-border" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                // Initialize the Bootstrap modal
+                const modalObj = new bootstrap.Modal(modal);
+                modal._bsModal = modalObj;
+                
+                // Set up collection filter change handler
+                const collectionFilter = modal.querySelector('#collection-filter');
+                collectionFilter.addEventListener('change', function() {
+                    loadBookmarks(this.value);
+                });
+            }
+            
+            // Show the modal
+            modal._bsModal.show();
+            
+            // Load collections and bookmarks
+            loadCollections();
+            loadBookmarks();
+        }
+        
+        // Load collections for the filter dropdown
+        function loadCollections() {
+            fetch('/collections/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const collectionFilter = document.getElementById('collection-filter');
+                    
+                    // Clear existing options except the first one
+                    while (collectionFilter.options.length > 1) {
+                        collectionFilter.remove(1);
+                    }
+                    
+                    // Add options for each collection
+                    data.collections.forEach(collection => {
+                        const option = document.createElement('option');
+                        option.value = collection.collection_name;
+                        option.textContent = `${collection.collection_name} (${collection.count})`;
+                        collectionFilter.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading collections:', error);
+            });
+        }
+        
+        // Load bookmarks
+        function loadBookmarks(collection = '') {
+            const bookmarksList = document.getElementById('bookmarks-list');
+            bookmarksList.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+            
+            const url = collection ? `/bookmarks/?collection=${encodeURIComponent(collection)}` : '/bookmarks/';
+            
+            fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    bookmarksList.innerHTML = '';
+                    
+                    if (data.bookmarks.length === 0) {
+                        bookmarksList.innerHTML = '<p class="text-center text-muted">No bookmarks found</p>';
+                        return;
+                    }
+                    
+                    // Add each bookmark to the list
+                    data.bookmarks.forEach(bookmark => {
+                        const item = document.createElement('a');
+                        item.href = `/songs/${bookmark.id}/`;
+                        item.className = 'list-group-item list-group-item-action';
+                        
+                        let primaryTab = '';
+                        if (bookmark.primary_tab) {
+                            primaryTab = `<span class="badge bg-primary">${bookmark.primary_tab}</span> `;
+                        }
+                        
+                        item.innerHTML = `
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">${bookmark.name}</h5>
+                                <small>${bookmark.era || 'Unknown Era'}</small>
+                            </div>
+                            <div class="d-flex w-100 justify-content-between">
+                                <div>
+                                    ${primaryTab}
+                                    <span class="badge bg-info d-inline-flex align-items-center">
+                                        <span>${bookmark.collection}</span>
+                                        <button type="button" class="ms-1 p-1 rounded-circle bg-danger text-white border-0" 
+                                            style="width: 14px; height: 14px; font-size: 8px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;"
+                                            aria-label="Remove from ${bookmark.collection}" 
+                                            data-song-id="${bookmark.id}" 
+                                            data-collection="${bookmark.collection}">
+                                            ✕
+                                        </button>
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                        bookmarksList.appendChild(item);
+                        
+                        // Add event listener to the remove button
+                        const removeBtn = item.querySelector('button');
+                        if (removeBtn) {
+                            removeBtn.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                e.stopPropagation(); // Prevent navigation to song page
+                                
+                                const songId = this.dataset.songId;
+                                const collectionName = this.dataset.collection;
+                                
+                                // Confirm before removing
+                                if (confirm(`Remove "${bookmark.name}" from collection "${collectionName}"?`)) {
+                                    removeBookmark(songId, collectionName, () => {
+                                        // Refresh the list after removal
+                                        loadBookmarks(document.getElementById('collection-filter').value);
+                                    });
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    bookmarksList.innerHTML = `<p class="text-center text-danger">${data.message || 'Error loading bookmarks'}</p>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading bookmarks:', error);
+                bookmarksList.innerHTML = '<p class="text-center text-danger">Error loading bookmarks</p>';
+            });
+        }
+        
+        // Function to remove a bookmark (used in the modal list)
+        function removeBookmark(songId, collectionName, callback) {
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('collection_name', collectionName);
+            formData.append('action', 'remove');
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            
+            // Send remove request to server
+            fetch(`/songs/${songId}/bookmark/`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // If we're viewing the current song's bookmarks, update the banners
+                    if (songId === "{{ song.id }}") {
+                        updateCollectionBanners(data.collections);
+                    }
+                    
+                    // Call the callback function if provided
+                    if (typeof callback === 'function') {
+                        callback();
+                    }
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error removing bookmark. Please try again.');
+            });
+        }
+        
+        
+        // Check for saved votes and bookmarks on page load
+        checkSavedVotes();
+        checkSavedBookmarks();
     });
 </script>
 {% endblock %}

@@ -14,4 +14,9 @@ urlpatterns = [
     path('media/fit-pics/', views.fit_pics_page, name='fit_pics'),
     path('media/social-media/', views.social_media_page, name='social_media'),
     path('coming-soon/', views.coming_soon, name='coming_soon'),
+    
+    # Bookmark API endpoints
+    path('songs/<int:song_id>/bookmark/', views.bookmark_song, name='bookmark_song'),
+    path('bookmarks/', views.get_bookmarks, name='get_bookmarks'),
+    path('collections/', views.get_collections, name='get_collections'),
 ]

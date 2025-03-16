@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib import messages
 from django.utils.html import format_html
-from .models import CartiCatalog, SheetTab, SongMetadata, SongCategory, ArtMedia, FitPic, SocialMedia, HomepageSettings
+from .models import CartiCatalog, SheetTab, SongMetadata, SongCategory, ArtMedia, FitPic, SocialMedia, HomepageSettings, ClientIdentifier, SongVote, SongBookmark
 
 class SongMetadataInline(admin.StackedInline):
     model = SongMetadata
@@ -200,17 +200,17 @@ class SocialMediaAdmin(admin.ModelAdmin):
 @admin.register(HomepageSettings)
 class HomepageSettingsAdmin(admin.ModelAdmin):
     """Admin for homepage settings"""
-    filter_horizontal = ('homepage_songs',)
-    list_display = ('__str__', 'enable_custom_homepage', 'song_count', 'updated_at')
+    filter_horizontal = ('homepage_songs', 'recently_leaked_songs')
+    list_display = ('__str__', 'enable_custom_homepage', 'enable_custom_recently_leaked', 'song_count', 'recently_leaked_count', 'updated_at')
     readonly_fields = ('created_at', 'updated_at')
     fieldsets = (
-        (None, {
-            'fields': ('enable_custom_homepage',),
-            'description': 'Enable custom homepage to show selected songs instead of Recent tab songs'
+        ('Recent Songs Section', {
+            'fields': ('enable_custom_homepage', 'homepage_songs'),
+            'description': 'Control the main Recent Songs section at the bottom of the homepage'
         }),
-        ('Song Selection', {
-            'fields': ('homepage_songs',),
-            'description': 'Select up to 10 songs to display on the homepage. Songs will be shown in the order added.'
+        ('Recently Leaked Section', {
+            'fields': ('enable_custom_recently_leaked', 'recently_leaked_songs'),
+            'description': 'Control the Recently Leaked section in the sidebar of the homepage'
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
@@ -221,7 +221,12 @@ class HomepageSettingsAdmin(admin.ModelAdmin):
     def song_count(self, obj):
         count = obj.homepage_songs.count()
         return count
-    song_count.short_description = 'Number of Songs'
+    song_count.short_description = 'Recent Songs Count'
+    
+    def recently_leaked_count(self, obj):
+        count = obj.recently_leaked_songs.count()
+        return count
+    recently_leaked_count.short_description = 'Recently Leaked Count'
     
     def has_add_permission(self, request):
         # Only allow adding if no instance exists
@@ -230,3 +235,69 @@ class HomepageSettingsAdmin(admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         # Don't allow deleting the settings
         return False
+        
+@admin.register(ClientIdentifier)
+class ClientIdentifierAdmin(admin.ModelAdmin):
+    """Admin interface for managing client identifiers"""
+    list_display = ('id', 'client_hash_truncated', 'vote_count', 'first_seen', 'last_seen', 'last_vote_time')
+    list_filter = ('first_seen', 'last_seen')
+    readonly_fields = ('client_hash', 'first_seen', 'last_seen')
+    ordering = ('-last_seen',)
+    search_fields = ('client_hash',)
+    list_per_page = 50
+    
+    def client_hash_truncated(self, obj):
+        """Display truncated hash for readability"""
+        return f"{obj.client_hash[:10]}...{obj.client_hash[-10:]}"
+    client_hash_truncated.short_description = 'Client Hash'
+    
+    def has_add_permission(self, request):
+        # Don't allow manually adding client identifiers
+        return False
+
+@admin.register(SongVote)
+class SongVoteAdmin(admin.ModelAdmin):
+    """Admin interface for managing song votes"""
+    list_display = ('id', 'song', 'vote_type', 'client_hash_truncated', 'ip_truncated', 'created_at')
+    list_filter = ('vote_type', 'created_at')
+    readonly_fields = ('song', 'ip_address', 'session_key', 'client_identifier', 'vote_type', 'created_at')
+    ordering = ('-created_at',)
+    search_fields = ('song__name', 'ip_address', 'client_identifier')
+    list_per_page = 100
+    
+    def client_hash_truncated(self, obj):
+        """Display truncated client hash for readability"""
+        if obj.client_identifier:
+            return f"{obj.client_identifier[:8]}...{obj.client_identifier[-8:]}"
+        return "None"
+    client_hash_truncated.short_description = 'Client Hash'
+    
+    def ip_truncated(self, obj):
+        """Display truncated IP for privacy"""
+        if obj.ip_address:
+            if '.' in obj.ip_address:  # IPv4
+                parts = obj.ip_address.split('.')
+                return f"{parts[0]}.{parts[1]}.*.*"
+            elif ':' in obj.ip_address:  # IPv6
+                parts = obj.ip_address.split(':')
+                return f"{parts[0]}:{parts[1]}:*:*:*"
+        return "None"
+    ip_truncated.short_description = 'IP Address'
+    
+    def has_add_permission(self, request):
+        # Don't allow manually adding votes
+        return False
+
+@admin.register(SongBookmark)
+class SongBookmarkAdmin(admin.ModelAdmin):
+    """Admin interface for managing song bookmarks"""
+    list_display = ('id', 'song', 'collection_name', 'client_hash_truncated', 'created_at')
+    list_filter = ('collection_name', 'created_at')
+    search_fields = ('song__name', 'collection_name', 'client_identifier')
+    ordering = ('-created_at',)
+    list_per_page = 50
+    
+    def client_hash_truncated(self, obj):
+        """Display truncated client hash for readability"""
+        return f"{obj.client_identifier[:8]}...{obj.client_identifier[-8:]}"
+    client_hash_truncated.short_description = 'Client'

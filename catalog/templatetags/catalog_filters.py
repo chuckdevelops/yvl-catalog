@@ -81,3 +81,24 @@ def format_type(value):
     elif value.lower() == "no":
         return "Off Streaming"
     return value
+
+@register.filter
+def remove_urls(text):
+    """
+    Remove URLs from text, returning non-URL portions only
+    """
+    if not text:
+        return ""
+        
+    # URL pattern to match http/https links
+    url_pattern = r'https?://\S+'
+    
+    # Remove URLs
+    cleaned_text = re.sub(url_pattern, '', text)
+    
+    # Clean up any leftover artifacts like empty parentheses, extra commas, etc.
+    cleaned_text = re.sub(r'\(\s*\)', '', cleaned_text)
+    cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
+    cleaned_text = cleaned_text.strip()
+    
+    return cleaned_text
