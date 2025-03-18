@@ -1,5 +1,7 @@
 import hashlib
+import re
 from django.utils import timezone
+from django.utils.html import format_html
 from .models import ClientIdentifier
 
 def get_client_ip(request):
@@ -49,3 +51,59 @@ def check_and_update_client(request):
     client.save()
     
     return client, time_since_last_vote
+    
+def get_embedded_player(links_text):
+    """Extract embed player from song links"""
+    if not links_text:
+        return None
+    
+    # Extract URLs from the links text
+    urls = re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', links_text)
+    if not urls:
+        return None
+    
+    # Create a simple but effective player interface that works without relying on external sites
+    first_url = urls[0]
+    song_url = first_url
+    
+    # Create a direct access button styled as a music player
+    player_html = format_html(
+        '''
+        <div class="card mt-3">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center">
+                    <a href="{}" target="_blank" class="btn btn-primary me-3">
+                        <i class="fas fa-play"></i>
+                    </a>
+                    <div>
+                        <div><strong>Play on Source Site</strong></div>
+                        <small class="text-muted">{}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        ''',
+        song_url,
+        get_site_name(song_url)
+    )
+    
+    return player_html
+
+def get_site_name(url):
+    """Get a friendly name for a URL's domain"""
+    if 'music.froste.lol' in url:
+        return 'music.froste.lol'
+    elif 'pillowcase.su' in url:
+        return 'pillowcase.su'
+    elif 'soundcloud.com' in url:
+        return 'SoundCloud'
+    elif 'spotify.com' in url:
+        return 'Spotify'
+    elif 'youtube.com' in url or 'youtu.be' in url:
+        return 'YouTube'
+    else:
+        # Extract domain name
+        domain_match = re.search(r'https?://(?:www\.)?([^/]+)', url)
+        if domain_match:
+            return domain_match.group(1)
+        return 'External Site'

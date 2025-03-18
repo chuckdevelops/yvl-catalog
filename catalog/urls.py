@@ -1,5 +1,8 @@
 from django.urls import path
 from . import views
+from django.views.generic import TemplateView
+from django.conf import settings
+from django.conf.urls.static import static
 
 app_name = 'catalog'  # Namespace for URL naming
 
@@ -19,4 +22,28 @@ urlpatterns = [
     path('songs/<int:song_id>/bookmark/', views.bookmark_song, name='bookmark_song'),
     path('bookmarks/', views.get_bookmarks, name='get_bookmarks'),
     path('collections/', views.get_collections, name='get_collections'),
+    
+    # Preview generation API endpoint
+    path('api/generate-preview/<int:song_id>/', views.generate_preview_api, name='generate_preview_api'),
+    
+    # Testing page for previews
+    path('previews/', views.preview_test, name='preview_test'),
+    
+    # Direct HTML file for audio testing (no Django processing)
+    path('direct-audio/', TemplateView.as_view(template_name='direct/audio.html'), name='direct_audio'),
+    
+    # Direct audio serving page (using custom Django view to serve audio)
+    path('audio-serve-test/', TemplateView.as_view(template_name='direct/audio_serve.html'), name='audio_serve_test'),
+    
+    # Direct audio serving (custom handler for each file)
+    path('audio-serve/<str:filename>', views.serve_audio, name='serve_audio'),
+    
+    # Full audio testing page
+    path('audio-test/', views.audio_test_view, name='audio_test'),
+    
+    # Advanced audio duration testing page
+    path('audio-duration-test/', TemplateView.as_view(template_name='catalog/audio_duration_test.html'), name='audio_duration_test'),
+    
+    # Endpoint to log audio play events
+    path('log-audio-play/', views.log_audio_play, name='log_audio_play'),
 ]

@@ -64,6 +64,7 @@ class CartiCatalog(models.Model):
     quality = models.CharField(max_length=100, null=True, blank=True)
     links = models.TextField(null=True, blank=True)
     primary_link = models.TextField(null=True, blank=True)
+    preview_url = models.CharField(max_length=255, null=True, blank=True)
     scraped_at = models.DateTimeField(auto_now_add=True, null=True)
     # FIXED: Removed extra_1, extra_2, etc. fields that don't exist in the database
     

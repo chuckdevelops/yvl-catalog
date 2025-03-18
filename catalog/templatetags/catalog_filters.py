@@ -1,5 +1,6 @@
 from django import template
 import re
+from catalog.utils import get_embedded_player
 
 register = template.Library()
 
@@ -102,3 +103,70 @@ def remove_urls(text):
     cleaned_text = cleaned_text.strip()
     
     return cleaned_text
+    
+@register.filter(is_safe=True)
+def get_player(links_text):
+    """
+    Generate an embedded player for the song links
+    """
+    return get_embedded_player(links_text)
+    
+@register.filter
+def extract_urls(text):
+    """Extract all URLs from a text string"""
+    if not text:
+        return []
+    
+    # Find all URLs in the text
+    urls = re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', text)
+    return urls
+    
+@register.filter
+def get_domain(url):
+    """Extract domain name from URL"""
+    if 'music.froste.lol' in url:
+        return 'music.froste.lol'
+    elif 'pillowcase.su' in url:
+        return 'pillowcase.su'
+    elif 'soundcloud.com' in url:
+        return 'SoundCloud'
+    elif 'spotify.com' in url:
+        return 'Spotify'
+    elif 'youtube.com' in url or 'youtu.be' in url:
+        return 'YouTube'
+    else:
+        # Extract domain name
+        domain_match = re.search(r'https?://(?:www\.)?([^/]+)', url)
+        if domain_match:
+            return domain_match.group(1)
+        return 'External Site'
+        
+@register.filter
+def get_download_url(url):
+    """Convert a song URL to its download URL if available"""
+    if 'music.froste.lol/song/' in url:
+        # Extract song ID and construct download URL
+        song_id = url.split('/song/')[1].split('/')[0]
+        return f"http://music.froste.lol/song/{song_id}/download"
+    
+    # Handle pillowcase.su downloads
+    elif 'pillowcase.su/f/' in url:
+        file_id = url.split('/f/')[1]
+        return f"https://pillowcase.su/f/{file_id}/download"
+    
+    # Return None if no download URL can be constructed
+    return None
+
+@register.filter
+def extract_preview_filename(preview_url):
+    """Extract filename from preview URL, safely handling different URL formats"""
+    if not preview_url:
+        return ""
+    
+    # If URL contains /media/previews/, extract filename
+    if '/media/previews/' in preview_url:
+        return preview_url.split('/media/previews/')[1]
+    
+    # Otherwise, just use basename
+    import os
+    return os.path.basename(preview_url)

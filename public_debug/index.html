@@ -1,0 +1,58 @@
+<\!DOCTYPE html>
+<html>
+<head>
+    <title>Direct MP3 Test</title>
+    <style>
+        body { font-family: sans-serif; margin: 30px; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test { border: 1px solid #ccc; margin: 15px 0; padding: 15px; border-radius: 5px; }
+        h2 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <h1>MP3 Direct File Test</h1>
+    <p>This page directly tests the four audio files to isolate the exact issue.</p>
+    
+    <div class='test'>
+        <h2>File 1: Original Working File (128kbps)</h2>
+        <audio controls style='width: 100%'>
+            <source src='working.mp3' type='audio/mpeg'>
+            Your browser does not support audio.
+        </audio>
+        <p><code>working.mp3</code>: 18.77s, 128kbps, 48.0kHz</p>
+    </div>
+    
+    <div class='test'>
+        <h2>File 2: Original Broken File (32kbps)</h2>
+        <audio controls style='width: 100%'>
+            <source src='broken.mp3' type='audio/mpeg'>
+            Your browser does not support audio.
+        </audio>
+        <p><code>broken.mp3</code>: 18.05s, 32kbps, 44.1kHz</p>
+    </div>
+    
+    <div class='test'>
+        <h2>File 3: Fixed Version (32kbps → 128kbps)</h2>
+        <audio controls style='width: 100%'>
+            <source src='fixed.mp3' type='audio/mpeg'>
+            Your browser does not support audio.
+        </audio>
+        <p><code>fixed.mp3</code>: 18.05s, 128kbps, 44.1kHz</p>
+    </div>
+    
+    <div class='test'>
+        <h2>File 4: Degraded Working File (128kbps → 32kbps)</h2>
+        <audio controls style='width: 100%'>
+            <source src='broken_from_working.mp3' type='audio/mpeg'>
+            Your browser does not support audio.
+        </audio>
+        <p><code>broken_from_working.mp3</code>: 18.77s, 32kbps, 48.0kHz</p>
+    </div>
+    
+    <div>
+        <h2>Test Results:</h2>
+        <p>1. If files 1 and 3 play but 2 and 4 don't: bitrate is the issue</p>
+        <p>2. If files 1 and 4 play but 2 and 3 don't: something else about the file is the issue</p>
+        <p>3. If only file 1 plays: both factors are relevant</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,197 @@
+{% extends 'catalog/base.html' %}
+
+{% block title %}Audio Duration Diagnostic{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Audio Duration Testing</h1>
+    <p>This page tests different methods of playing and limiting audio duration to diagnose issues with 30-second preview files.</p>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h4 mb-0">1. Standard HTML5 Audio Player (without duration limit)</h2>
+        </div>
+        <div class="card-body">
+            <audio id="standard-player" controls class="w-100 mb-3"></audio>
+            <div class="btn-group">
+                <button class="btn btn-outline-primary" onclick="playFile('standard-player', '56711856-592a-4f2b-9de9-e6781f8deff1.mp3')">Play Working File (18.77s)</button>
+                <button class="btn btn-outline-secondary" onclick="playFile('standard-player', '0e75dda9-fc84-4e1a-9b2d-85cec2dfbba6.mp3')">Play 30s File</button>
+            </div>
+            <div class="alert alert-light mt-3" id="standard-result">Results will appear here</div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h4 mb-0">2. HTML5 Audio with Duration Limit (20s max)</h2>
+        </div>
+        <div class="card-body">
+            <audio id="limited-player" controls class="w-100 mb-3"></audio>
+            <div class="btn-group">
+                <button class="btn btn-outline-primary" onclick="playFileWithLimit('limited-player', '56711856-592a-4f2b-9de9-e6781f8deff1.mp3')">Play Working File (18.77s)</button>
+                <button class="btn btn-outline-secondary" onclick="playFileWithLimit('limited-player', '0e75dda9-fc84-4e1a-9b2d-85cec2dfbba6.mp3')">Play 30s File</button>
+            </div>
+            <div class="alert alert-light mt-3" id="limited-result">Results will appear here</div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h4 mb-0">3. Web Audio API Alternative (20s max)</h2>
+        </div>
+        <div class="card-body">
+            <div class="btn-group">
+                <button class="btn btn-outline-primary" id="webaudio-play-short">Play Working File (18.77s)</button>
+                <button class="btn btn-outline-secondary" id="webaudio-play-long">Play 30s File</button>
+            </div>
+            <div class="alert alert-light mt-3" id="webaudio-result">Results will appear here</div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h2 class="h4 mb-0">4. Modified File Solution</h2>
+        </div>
+        <div class="card-body">
+            <p>
+                Based on our tests, the issue appears to be that browsers have trouble with 30-second audio files used in preview contexts.
+                You could create a batch script that shortens all preview files to 18 seconds as a more permanent solution.
+            </p>
+            <div class="alert alert-info">
+                <p><strong>Recommended solution:</strong></p>
+                <ol>
+                    <li>Use a tool like ffmpeg to create shorter versions of all preview files (under 20 seconds)</li>
+                    <li>Update the database preview_url entries to point to the new shorter files</li>
+                    <li>Test to verify all files play correctly without needing JavaScript limiting</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Standard HTML5 audio player
+    function playFile(playerId, filename) {
+        const player = document.getElementById(playerId);
+        const result = document.getElementById('standard-result');
+        result.innerHTML = 'Loading...';
+        
+        player.src = `/media/previews/${filename}`;
+        
+        player.onloadedmetadata = () => {
+            result.innerHTML = `Metadata loaded. Duration: ${player.duration.toFixed(2)}s`;
+        };
+        
+        player.onplay = () => {
+            result.innerHTML += '<br>Playback started';
+        };
+        
+        player.onended = () => {
+            result.innerHTML += '<br>Playback ended naturally';
+        };
+        
+        player.onerror = (e) => {
+            result.innerHTML = `Error: ${player.error ? player.error.message : 'Unknown error'}`;
+        };
+        
+        player.play().catch(e => {
+            result.innerHTML = `Play error: ${e.message}`;
+        });
+    }
+    
+    // HTML5 audio with duration limit
+    function playFileWithLimit(playerId, filename) {
+        const player = document.getElementById(playerId);
+        const result = document.getElementById('limited-result');
+        result.innerHTML = 'Loading...';
+        
+        player.src = `/media/previews/${filename}`;
+        
+        // Remove previous event listeners if any
+        const newPlayer = player.cloneNode(true);
+        player.parentNode.replaceChild(newPlayer, player);
+        
+        newPlayer.onloadedmetadata = () => {
+            result.innerHTML = `Metadata loaded. Duration: ${newPlayer.duration.toFixed(2)}s`;
+        };
+        
+        newPlayer.ontimeupdate = () => {
+            if (newPlayer.currentTime >= 20) {
+                newPlayer.pause();
+                result.innerHTML += '<br>Playback stopped at 20s limit';
+            }
+        };
+        
+        newPlayer.onplay = () => {
+            result.innerHTML += '<br>Playback started';
+        };
+        
+        newPlayer.onended = () => {
+            result.innerHTML += '<br>Playback ended naturally';
+        };
+        
+        newPlayer.onerror = (e) => {
+            result.innerHTML = `Error: ${newPlayer.error ? newPlayer.error.message : 'Unknown error'}`;
+        };
+        
+        newPlayer.play().catch(e => {
+            result.innerHTML = `Play error: ${e.message}`;
+        });
+    }
+    
+    // Web Audio API approach
+    document.getElementById('webaudio-play-short').addEventListener('click', () => {
+        playWithWebAudio('56711856-592a-4f2b-9de9-e6781f8deff1.mp3');
+    });
+    
+    document.getElementById('webaudio-play-long').addEventListener('click', () => {
+        playWithWebAudio('0e75dda9-fc84-4e1a-9b2d-85cec2dfbba6.mp3');
+    });
+    
+    function playWithWebAudio(filename) {
+        const result = document.getElementById('webaudio-result');
+        result.innerHTML = 'Loading audio with Web Audio API...';
+        
+        // Create audio context
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let source = null;
+        
+        fetch(`/media/previews/${filename}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.arrayBuffer();
+            })
+            .then(arrayBuffer => {
+                result.innerHTML += '<br>File loaded, decoding audio...';
+                return audioContext.decodeAudioData(arrayBuffer);
+            })
+            .then(audioBuffer => {
+                result.innerHTML += `<br>Audio decoded. Duration: ${audioBuffer.duration.toFixed(2)}s`;
+                
+                // Create audio source
+                source = audioContext.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(audioContext.destination);
+                
+                // Limit to 20 seconds
+                const maxDuration = Math.min(audioBuffer.duration, 20);
+                
+                // Play audio
+                source.start(0, 0, maxDuration);
+                result.innerHTML += `<br>Playback started (limited to ${maxDuration.toFixed(2)}s)`;
+                
+                // Handle ending
+                setTimeout(() => {
+                    result.innerHTML += '<br>Playback should have ended';
+                }, maxDuration * 1000);
+            })
+            .catch(error => {
+                result.innerHTML = `Error: ${error.message}`;
+            });
+    }
+</script>
+{% endblock %}

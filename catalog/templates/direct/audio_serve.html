@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Audio Serving Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .audio-container { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        h1, h2 { color: #333; }
+    </style>
+</head>
+<body>
+    <h1>Direct Audio Player Test (Custom Server)</h1>
+    <p>This page uses a custom view to directly serve the audio files through Django.</p>
+
+    <div class="audio-container">
+        <h2>Song ID 430 - Super Soaker (Known working)</h2>
+        <audio controls style="width: 100%;">
+            <source src="/audio-serve/56711856-592a-4f2b-9de9-e6781f8deff1.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+
+    <div class="audio-container">
+        <h2>Song 2</h2>
+        <audio controls style="width: 100%;">
+            <source src="/audio-serve/0e75dda9-fc84-4e1a-9b2d-85cec2dfbba6.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+
+    <div class="audio-container">
+        <h2>Song 3</h2>
+        <audio controls style="width: 100%;">
+            <source src="/audio-serve/1739d094-c523-4b22-b182-48f18586fcb6.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+
+    <div class="audio-container">
+        <h2>Song 4</h2>
+        <audio controls style="width: 100%;">
+            <source src="/audio-serve/281810ee-3d37-43f6-91db-df2f9288d745.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+
+    <div class="audio-container">
+        <h2>Song 5</h2>
+        <audio controls style="width: 100%;">
+            <source src="/audio-serve/29b7a015-5f74-4063-96b1-1a63bf7192a7.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+</body>
+</html>

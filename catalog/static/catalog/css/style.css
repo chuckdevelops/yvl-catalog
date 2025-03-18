@@ -18,10 +18,15 @@ body {
     letter-spacing: 0.2px;
 }
 
+a, .card {
+    transition: all 0.2s ease;
+}
+
 .navbar {
     background-color: #fff !important;
     border-bottom: 1px solid #eee;
     padding: 1rem 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.03);
 }
 
 .nav-item {
@@ -93,6 +98,10 @@ footer p {
     background-color: transparent;
 }
 
+.table thead {
+    background-color: #f8f9fa;
+}
+
 .table th {
     font-weight: 600;
     color: #555;
@@ -147,7 +156,7 @@ form label {
     background-color: #fff;
     border: 1px solid #ddd;
     color: #333;
-    border-radius: 4px;
+    border-radius: 6px;
     padding: 0.5rem 0.75rem;
 }
 

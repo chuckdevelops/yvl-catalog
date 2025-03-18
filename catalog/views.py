@@ -5,6 +5,7 @@ from django.db import models, transaction
 from django.template.defaulttags import register
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.conf import settings
 import re
 from .models import CartiCatalog, SheetTab, SongMetadata, SongVote, HomepageSettings, ArtMedia, Interview, FitPic, SocialMedia, SongBookmark, ClientIdentifier
 from .utils import get_client_ip, check_and_update_client, generate_client_hash
@@ -1085,6 +1086,27 @@ def song_detail(request, song_id):
         id=song_id
     )
     
+    # Process preview URL for audio player
+    if song.preview_url:
+        import os
+        # Extract the correct filename
+        if song.preview_url.startswith('/media/previews/'):
+            preview_filename = song.preview_url[16:]  # Extract filename from URL
+        else:
+            preview_filename = os.path.basename(song.preview_url)
+            
+        # Check if file exists
+        preview_file_path = os.path.join(settings.MEDIA_ROOT, 'previews', preview_filename)
+        song.preview_file_exists = os.path.exists(preview_file_path)
+        
+        # Use custom audio server URL
+        song.preview_audio_url = f'/audio-serve/{preview_filename}'
+        song.direct_audio_url = f'/media/previews/{preview_filename}'
+    else:
+        song.preview_file_exists = False
+        song.preview_audio_url = None
+        song.direct_audio_url = None
+    
     # Get recommended songs based on collaborative filtering
     from django.db.models import Count, Q
     
@@ -1258,8 +1280,67 @@ def song_detail(request, song_id):
         song.display_album_name = None
         song.display_track_number = None
     
+    # Helper function to compare song name similarity
+    def similar_names(name1, name2):
+        # Convert to lowercase and remove any special characters
+        name1 = re.sub(r'[^\w\s]', '', name1.lower())
+        name2 = re.sub(r'[^\w\s]', '', name2.lower())
+        
+        # Split into words
+        words1 = set(name1.split())
+        words2 = set(name2.split())
+        
+        # Calculate Jaccard similarity
+        if not words1 or not words2:
+            return 0
+        
+        intersection = len(words1.intersection(words2))
+        union = len(words1.union(words2))
+        
+        return intersection / union if union > 0 else 0
+
     # Get similar songs from the same album if applicable
     album_related_songs = []
+    
+    # Extract base song name (without version indicators)
+    base_song_name = None
+    if song.name:
+        base_song_name = re.sub(r'\s*\[V\d+\].*', '', song.name) 
+    
+    # Find version variants regardless of album
+    version_variants = []
+    if base_song_name:
+        # Look for all songs with the same base name but different version numbers
+        # This will find songs like "Song Name [V1]", "Song Name [V2]", etc.
+        versions_query = CartiCatalog.objects.filter(
+            name__icontains=base_song_name,
+            name__regex=r'\[V\d+\]'  # Must have a version tag
+        ).exclude(id=song.id)  # Exclude the current song
+        
+        for version in versions_query:
+            # Double check that this is really a variant of our song
+            version_base_name = re.sub(r'\s*\[V\d+\].*', '', version.name)
+            # Use a more forgiving match to handle slight differences
+            name_similarity = similar_names(base_song_name, version_base_name)
+            if name_similarity >= 0.8:  # 80% similarity should indicate it's a variant
+                version_variants.append(version)
+        
+        # If current song has a version indicator, also find the "main" version
+        # This handles the case where we're viewing a version but want to see the original
+        current_is_version = re.search(r'\s*\[V\d+\]', song.name)
+        if current_is_version:
+            main_versions = CartiCatalog.objects.filter(
+                name__iexact=base_song_name  # Exact match for the base name
+            ).exclude(id=song.id)
+            
+            for main_version in main_versions:
+                # Make sure this doesn't have a version tag
+                if not re.search(r'\s*\[V\d+\]', main_version.name):
+                    version_variants.append(main_version)
+    
+    # Set the version variants to be displayed
+    song.version_variants = version_variants
+    
     if song.display_album_name:
         # Extract the album name without the (Official)/(Unreleased) suffix
         clean_album_name = song.display_album_name.split(' (')[0]
@@ -1282,7 +1363,7 @@ def song_detail(request, song_id):
         
         # Separate regular tracks from version variants
         regular_tracks = []
-        version_variants = []
+        album_version_variants = []
         
         # Process each song to check if it's truly related
         for potential_song in all_potential_matches:
@@ -1307,7 +1388,7 @@ def song_detail(request, song_id):
             if same_album and potential_song.display_track_number:
                 if is_version:
                     # Version variant
-                    version_variants.append(potential_song)
+                    album_version_variants.append(potential_song)
                 else:
                     # Only add regular tracks if we don't already have this track number
                     existing_track_nums = [s.display_track_number for s in regular_tracks]
@@ -1317,7 +1398,12 @@ def song_detail(request, song_id):
         # Add regular tracks to the album tracklist
         album_related_songs = regular_tracks
         
-        # Add version variants after the regular tracks for display after the album section
+        # Add album-specific versions to the version_variants list
+        for album_variant in album_version_variants:
+            if album_variant.id not in [v.id for v in version_variants]:
+                version_variants.append(album_variant)
+        
+        # Update the song's version variants
         song.version_variants = version_variants
         
         # Add potential missing tracks (for complete 1-N tracks in album)
@@ -1491,6 +1577,240 @@ def vote_song(request, song_id):
 def coming_soon(request):
     """Coming soon page"""
     return render(request, 'catalog/coming_soon.html')
+
+def serve_audio(request, filename):
+    """Direct audio file server"""
+    import os
+    from django.conf import settings
+    from django.http import FileResponse, Http404
+    import logging
+    
+    # Setup logging
+    logger = logging.getLogger(__name__)
+    
+    # Enhanced logging with more context
+    logger.info(f"[AUDIO SERVE] Attempting to serve audio file: {filename}")
+    logger.info(f"[AUDIO SERVE] Request URL: {request.path}")
+    logger.info(f"[AUDIO SERVE] Request method: {request.method}")
+    logger.info(f"[AUDIO SERVE] User agent: {request.META.get('HTTP_USER_AGENT', 'Unknown')}")
+    logger.info(f"[AUDIO SERVE] Referrer: {request.META.get('HTTP_REFERER', 'None')}")
+    
+    # Security check to prevent directory traversal
+    if '..' in filename or filename.startswith('/'):
+        logger.error(f"[AUDIO SERVE] Security check failed for filename: {filename}")
+        raise Http404("Invalid filename")
+    
+    # Get the absolute path to the file
+    file_path = os.path.join(settings.MEDIA_ROOT, 'previews', filename)
+    logger.info(f"[AUDIO SERVE] Looking for file at: {file_path}")
+    
+    # Check if file exists
+    if not os.path.exists(file_path):
+        logger.error(f"[AUDIO SERVE] File not found: {file_path}")
+        raise Http404(f"Audio file {filename} not found")
+    
+    logger.info(f"[AUDIO SERVE] File exists, size: {os.path.getsize(file_path)} bytes")
+    
+    # Check file readability and permissions
+    if not os.access(file_path, os.R_OK):
+        logger.error(f"[AUDIO SERVE] File not readable: {file_path}")
+        raise Http404(f"Audio file {filename} is not readable")
+    
+    # Get file permissions and log them
+    file_permissions = oct(os.stat(file_path).st_mode)[-3:]
+    logger.info(f"[AUDIO SERVE] File permissions: {file_permissions}")
+    
+    # Serve the file
+    try:
+        # Use 'rb' mode to ensure binary reading
+        response = FileResponse(open(file_path, 'rb'), content_type='audio/mpeg')
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        
+        # Set content length
+        file_size = os.path.getsize(file_path)
+        response['Content-Length'] = str(file_size)
+        
+        # Enable CORS for media files
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Range'
+        
+        # Disable caching
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        
+        # Add range support explicitly
+        response['Accept-Ranges'] = 'bytes'
+        
+        logger.info(f"[AUDIO SERVE] Successfully created response for {filename}")
+        print(f"[AUDIO SERVE] Successfully serving {filename} from {file_path}")
+        return response
+    except Exception as e:
+        logger.error(f"[AUDIO SERVE] Error serving file {filename}: {str(e)}")
+        raise
+
+def log_audio_play(request):
+    """Endpoint to log audio play events from the frontend"""
+    import json
+    import logging
+    from django.http import JsonResponse
+    from django.views.decorators.http import require_POST
+    from django.views.decorators.csrf import csrf_exempt
+    
+    logger = logging.getLogger(__name__)
+    
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            song_id = data.get('song_id')
+            src = data.get('src')
+            timestamp = data.get('timestamp')
+            
+            logger.info(f"[AUDIO PLAY] Song ID: {song_id}, Source: {src}, Time: {timestamp}")
+            print(f"[AUDIO PLAY] Song ID: {song_id}, Source: {src}, Time: {timestamp}")
+            
+            return JsonResponse({'status': 'success'})
+        except Exception as e:
+            logger.error(f"[AUDIO PLAY] Error logging play event: {str(e)}")
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+
+def audio_test_view(request):
+    """Combined test view for all audio approaches"""
+    import os
+    from django.conf import settings
+    
+    # Get a list of all MP3 files in the previews directory
+    preview_dir = os.path.join(settings.MEDIA_ROOT, 'previews')
+    mp3_files = []
+    
+    if os.path.exists(preview_dir):
+        mp3_files = [f for f in os.listdir(preview_dir) if f.endswith('.mp3')]
+    
+    # Check file details
+    file_details = []
+    for filename in mp3_files:
+        file_path = os.path.join(preview_dir, filename)
+        details = {
+            'filename': filename,
+            'size': os.path.getsize(file_path),
+            'readable': os.access(file_path, os.R_OK),
+            'permissions': oct(os.stat(file_path).st_mode)[-3:],
+            'direct_url': f'/media/previews/{filename}',
+            'custom_url': f'/audio-serve/{filename}',
+        }
+        file_details.append(details)
+    
+    # Sort by modification time (newest first)
+    file_details.sort(key=lambda x: os.path.getmtime(os.path.join(preview_dir, x['filename'])), reverse=True)
+    
+    context = {
+        'mp3_files': file_details,
+        'media_root': settings.MEDIA_ROOT,
+        'media_url': settings.MEDIA_URL,
+    }
+    
+    return render(request, 'catalog/audio_test.html', context)
+
+def preview_test(request):
+    """Testing page for previews"""
+    # Get all songs with previews
+    songs_with_previews = CartiCatalog.objects.exclude(preview_url__isnull=True).order_by('-id')
+    
+    # Get a list of actual MP3 files in the previews directory
+    import os
+    preview_dir = os.path.join(settings.MEDIA_ROOT, 'previews')
+    valid_files = os.listdir(preview_dir) if os.path.exists(preview_dir) else []
+    
+    # Process song data
+    processed_songs = []
+    for song in songs_with_previews:
+        # Extract the original preview URL
+        original_url = song.preview_url
+        
+        # Get the correct filename no matter what format the URL is in
+        if original_url.startswith('/media/previews/'):
+            filename = original_url[16:]  # Extract filename from URL
+        else:
+            filename = os.path.basename(original_url)
+            
+        # Check if file exists
+        file_exists = filename in valid_files
+        file_path = os.path.join(preview_dir, filename)
+        
+        # Add info to the song object
+        song_data = {
+            'id': song.id,
+            'name': song.name,
+            'original_url': original_url,
+            'filename': filename,
+            'audio_url': f'/media/previews/{filename}',  # Simple direct URL
+            'file_exists': file_exists,
+        }
+        
+        # Add file details if it exists
+        if file_exists:
+            song_data['file_size'] = os.path.getsize(file_path)
+            song_data['file_readable'] = os.access(file_path, os.R_OK)
+            song_data['file_permissions'] = oct(os.stat(file_path).st_mode)[-3:]
+        else:
+            song_data['file_size'] = 0
+            song_data['file_readable'] = False
+            song_data['file_permissions'] = 'N/A'
+            
+        processed_songs.append(song_data)
+    
+    context = {
+        'songs': processed_songs,
+        'media_path': settings.MEDIA_ROOT,
+        'media_url': settings.MEDIA_URL,
+        'base_dir': settings.BASE_DIR,
+        'preview_files': valid_files,
+    }
+    
+    return render(request, 'catalog/preview_test.html', context)
+    
+# Preview generation API endpoint
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import user_passes_test
+import json
+from catalog.preview_processor import generate_preview_for_song
+
+@require_POST
+@user_passes_test(lambda u: u.is_staff)
+def generate_preview_api(request, song_id):
+    """AJAX endpoint for staff to generate preview clips"""
+    try:
+        # Parse request body
+        data = json.loads(request.body)
+        url = data.get('url')
+        
+        if not url:
+            return JsonResponse({'status': 'error', 'message': 'URL is required'}, status=400)
+        
+        # Generate the preview
+        preview_url = generate_preview_for_song(song_id)
+        
+        if preview_url:
+            return JsonResponse({
+                'status': 'success',
+                'preview_url': preview_url,
+                'message': 'Preview generated successfully'
+            })
+        else:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Failed to generate preview'
+            }, status=500)
+            
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': str(e)
+        }, status=500)
 
 
 # Bookmark functionality

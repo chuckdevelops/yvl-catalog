@@ -103,11 +103,199 @@
                             <td>{% if song.available_length and song.available_length != "NaN" and song.available_length != "nan" %}{{ song.available_length|remove_urls }}{% else %}<em></em>{% endif %}</td>
                         </tr>
                     </table>
-
+                    
+                    {% load catalog_filters %}
+                    
+                    {% if song.preview_url %}
+                    <div class="mt-4">
+                        <h4>30-Second Preview</h4>
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <!-- Try multiple audio serving methods with duration constraint -->
+                                {% if song.preview_file_exists %}
+                                <div class="mb-3">
+                                    <audio id="preview-player" controls preload="auto" class="w-100">
+                                        <source src="{{ song.preview_audio_url }}" type="audio/mpeg">
+                                        Your browser does not support the audio element.
+                                    </audio>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-secondary" 
+                                                    onclick="playWithDurationLimit('{{ song.preview_audio_url }}')">
+                                                Method 1: Custom Server
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" 
+                                                    onclick="playWithDurationLimit('{{ song.direct_audio_url }}')">
+                                                Method 2: Direct URL
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary" 
+                                                    onclick="playWithDurationLimit('{{ song.preview_url }}')">
+                                                Method 3: Database URL
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <script>
+                                    document.addEventListener('DOMContentLoaded', function() {
+                                        const audioPlayer = document.getElementById('preview-player');
+                                        
+                                        // Add error event listener to log any issues without fallback
+                                        audioPlayer.addEventListener('error', function(e) {
+                                            console.error('Audio player error:', e);
+                                            console.log('Error details:', this.error);
+                                            console.log('Audio src:', this.src);
+                                        });
+                                        
+                                        // Add play event listener to log when audio starts playing
+                                        audioPlayer.addEventListener('play', function() {
+                                            console.log('Audio playback started:', this.src);
+                                            // Send a log event to the server via fetch
+                                            fetch('/log-audio-play/', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'X-CSRFToken': '{{ csrf_token }}'
+                                                },
+                                                body: JSON.stringify({
+                                                    song_id: {{ song.id }},
+                                                    src: this.src,
+                                                    timestamp: new Date().toISOString()
+                                                })
+                                            }).catch(err => console.log('Logging request sent'));
+                                        });
+                                        
+                                        // Log when method buttons are clicked
+                                        const methodButtons = document.querySelectorAll('.btn-group button');
+                                        methodButtons.forEach(button => {
+                                            button.addEventListener('click', function() {
+                                                console.log('Method button clicked:', this.textContent.trim());
+                                                console.log('URL to play:', this.getAttribute('onclick').match(/'([^']+)'/)[1]);
+                                            });
+                                        });
+                                    });
+                                </script>
+                                
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" id="limitDuration" checked>
+                                    <label class="form-check-label" for="limitDuration">
+                                        Limit playback to 20 seconds (may fix playback issues)
+                                    </label>
+                                </div>
+                                
+                                <script>
+                                function playWithDurationLimit(audioUrl) {
+                                    const audioPlayer = document.getElementById('preview-player');
+                                    const limitDuration = document.getElementById('limitDuration').checked;
+                                    
+                                    // Set audio source
+                                    audioPlayer.src = audioUrl;
+                                    
+                                    // Add event listener for timeupdate
+                                    if (limitDuration) {
+                                        audioPlayer.addEventListener('timeupdate', function() {
+                                            // Stop after 20 seconds
+                                            if (audioPlayer.currentTime >= 20) {
+                                                audioPlayer.pause();
+                                                // Remove listener to prevent multiple pauses
+                                                audioPlayer.removeEventListener('timeupdate', arguments.callee);
+                                            }
+                                        });
+                                    }
+                                    
+                                    // Start playing
+                                    audioPlayer.play().catch(e => console.error('Error playing audio:', e));
+                                }
+                                
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    // Initialize with duration limit
+                                    const audioPlayer = document.getElementById('preview-player');
+                                    const limitDuration = document.getElementById('limitDuration');
+                                    
+                                    limitDuration.addEventListener('change', function() {
+                                        if (this.checked) {
+                                            // Add listener when checkbox is checked
+                                            audioPlayer.addEventListener('timeupdate', function() {
+                                                if (audioPlayer.currentTime >= 20) {
+                                                    audioPlayer.pause();
+                                                }
+                                            });
+                                        }
+                                    });
+                                    
+                                    // Initial setup
+                                    if (limitDuration.checked) {
+                                        audioPlayer.addEventListener('timeupdate', function() {
+                                            if (audioPlayer.currentTime >= 20) {
+                                                audioPlayer.pause();
+                                            }
+                                        });
+                                    }
+                                });
+                                </script>
+                                {% else %}
+                                <p class="text-muted">Preview file not found.</p>
+                                {% endif %}
+                                <div class="mt-2">
+                                    <a href="{% url 'catalog:audio_test' %}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-external-link-alt me-1"></i> Open Audio Testing Page
+                                    </a>
+                                    <a href="/audio_comparison.html" target="_blank" class="btn btn-sm btn-outline-success ms-1">
+                                        <i class="fas fa-music me-1"></i> Audio Bitrate Analysis
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
                     {% if song.links %}
                     <div class="mt-4">
-                        <h4>Links</h4>
-                        <p>{{ song.links|urlize }}</p>
+                        <h4>{% if song.preview_url %}Full Track Options{% else %}Listen{% endif %}</h4>
+                        <div id="player-container">
+                            {% for url in song.links|extract_urls %}
+                            {% with domain=url|get_domain download_url=url|get_download_url %}
+                            <div class="card mb-2">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <strong>{{ domain }}</strong>
+                                        <span class="badge bg-secondary">{{ song.type|format_type }}</span>
+                                    </div>
+                                    
+                                    <div class="d-flex">
+                                        <!-- Play button -->
+                                        <a href="{{ url }}" target="_blank" class="btn {% if 'music.froste.lol' in domain %}btn-info{% elif 'pillowcase.su' in domain %}btn-warning{% elif 'SoundCloud' in domain %}btn-danger{% elif 'Spotify' in domain %}btn-success{% else %}btn-primary{% endif %} me-2">
+                                            <i class="fas fa-play me-1"></i> Play
+                                        </a>
+                                        
+                                        <!-- Download button (when available) -->
+                                        {% if download_url %}
+                                        <a href="{{ download_url }}" class="btn btn-outline-primary" download>
+                                            <i class="fas fa-download me-1"></i> Download
+                                        </a>
+                                        {% endif %}
+                                        
+                                        <!-- No preview button for automatic processing -->
+                                        {% comment %}
+                                        {% if not song.preview_url and request.user.is_staff %}
+                                        <button class="btn btn-outline-secondary ms-2 generate-preview-btn" 
+                                                data-song-id="{{ song.id }}"
+                                                data-url="{{ url }}">
+                                            <i class="fas fa-music me-1"></i> Create Preview
+                                        </button>
+                                        {% endif %}
+                                        {% endcomment %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endwith %}
+                            {% empty %}
+                            <p class="text-muted">No playable links available.</p>
+                            {% endfor %}
+                        </div>
                     </div>
                     {% endif %}
                     
@@ -118,6 +306,23 @@
                             <div class="card-body bg-light">
                                 {{ song.notes|linebreaks }}
                             </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Version Variants Section -->
+                    {% if song.version_variants %}
+                    <div class="mt-4">
+                        <h4>Other Versions</h4>
+                        <div class="list-group">
+                            {% for variant in song.version_variants %}
+                            <a href="{% url 'catalog:song_detail' song_id=variant.id %}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <div>{{ variant.name }}</div>
+                                    <small>{{ variant.era }}</small>
+                                </div>
+                            </a>
+                            {% endfor %}
                         </div>
                     </div>
                     {% endif %}
@@ -212,6 +417,7 @@
         const collectionNameInput = document.getElementById('collection-name');
         const collectionBannersContainer = document.getElementById('collection-banners');
         const viewBookmarksLink = document.getElementById('view-bookmarks-link');
+        const generatePreviewButtons = document.querySelectorAll('.generate-preview-btn');
         
         // Initialize tooltips
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
@@ -624,6 +830,55 @@
         // Check for saved votes and bookmarks on page load
         checkSavedVotes();
         checkSavedBookmarks();
+        
+        // Handler for generate preview buttons (admin only)
+        generatePreviewButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const songId = this.dataset.songId;
+                const url = this.dataset.url;
+                const button = this;
+                
+                // Change button state
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                
+                // Make AJAX request to generate preview
+                fetch(`/api/generate-preview/${songId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ url: url })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Preview generated successfully
+                        button.innerHTML = '<i class="fas fa-check"></i> Preview Created';
+                        button.classList.remove('btn-outline-secondary');
+                        button.classList.add('btn-success');
+                        
+                        // Reload the page after a short delay to show the new preview
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        // Error generating preview
+                        button.innerHTML = '<i class="fas fa-times"></i> Failed';
+                        button.classList.remove('btn-outline-secondary');
+                        button.classList.add('btn-danger');
+                        console.error('Error generating preview:', data.message);
+                    }
+                })
+                .catch(error => {
+                    button.innerHTML = '<i class="fas fa-times"></i> Error';
+                    button.classList.remove('btn-outline-secondary');
+                    button.classList.add('btn-danger');
+                    console.error('Error:', error);
+                });
+            });
+        });
     });
 </script>
 {% endblock %}

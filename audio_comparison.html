@@ -1,0 +1,55 @@
+<\!DOCTYPE html>
+<html>
+<head>
+    <title>MP3 Bitrate Comparison</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; max-width: 800px; margin: 0 auto; }
+        .player { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        h1, h2 { color: #333; }
+        .success { color: green; }
+        .failure { color: red; }
+    </style>
+</head>
+<body>
+    <h1>MP3 Bitrate Comparison Test</h1>
+    
+    <div>
+        <h2>Audio File Details:</h2>
+        <ul>
+            <li><strong>Working file:</strong> 56711856-592a-4f2b-9de9-e6781f8deff1.mp3 - 128kbps - <span class='success'>WORKS</span></li>
+            <li><strong>Problem file:</strong> 0e75dda9-fc84-4e1a-9b2d-85cec2dfbba6.mp3 - 32kbps - <span class='failure'>FAILS</span></li>
+            <li><strong>Fixed test file:</strong> test_files/problem_fixed.mp3 - 128kbps - <span class='success'>WORKS</span></li>
+        </ul>
+    </div>
+    
+    <div class='player'>
+        <h2>The Working File (128kbps)</h2>
+        <audio controls style='width: 100%'>
+            <source src='/media/previews/56711856-592a-4f2b-9de9-e6781f8deff1.mp3' type='audio/mpeg'>
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+    
+    <div class='player'>
+        <h2>The Problem File (32kbps)</h2>
+        <audio controls style='width: 100%'>
+            <source src='/media/previews/0e75dda9-fc84-4e1a-9b2d-85cec2dfbba6.mp3' type='audio/mpeg'>
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+    
+    <div class='player'>
+        <h2>The Fixed Test File (128kbps)</h2>
+        <audio controls style='width: 100%'>
+            <source src='/test_files/problem_fixed.mp3' type='audio/mpeg'>
+            Your browser does not support the audio element.
+        </audio>
+    </div>
+    
+    <div>
+        <h2>Solution:</h2>
+        <p>Running the <code>fix_mp3_bitrates.py</code> script will convert all low-bitrate files to standard 128kbps,
+        which will fix the playback issues in all browsers.</p>
+    </div>
+</body>
+</html>
