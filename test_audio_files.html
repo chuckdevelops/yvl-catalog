@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Direct Audio Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .audio-container { margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; }
+        h3 { margin-top: 0; }
+        .timestamp { color: #888; font-size: 12px; }
+        button { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Direct Audio File Test</h1>
+    <p>This page loads audio files directly with a cache-busting parameter to ensure fresh content.</p>
+    
+    <div class="audio-container">
+        <h3>Reference File (ID 430)</h3>
+        <p class="timestamp">Last modified: 19:30</p>
+        <audio controls>
+            <source src="/media/previews/56711856-592a-4f2b-9de9-e6781f8deff1.mp3?t=1" type="audio/mpeg">
+        </audio>
+    </div>
+    
+    <div class="audio-container">
+        <h3>Recently Updated File (ID 1076)</h3>
+        <p class="timestamp">Last modified: 23:04</p>
+        <audio controls>
+            <source src="/media/previews/836c4cc1-2814-4127-9233-1688b8bb2fc4.mp3?t=1" type="audio/mpeg">
+        </audio>
+    </div>
+    
+    <div class="audio-container">
+        <h3>Other File 1</h3>
+        <p class="timestamp">Last modified: 19:46</p>
+        <audio controls>
+            <source src="/media/previews/0e75dda9-fc84-4e1a-9b2d-85cec2dfbba6.mp3?t=1" type="audio/mpeg">
+        </audio>
+    </div>
+    
+    <div class="audio-container">
+        <h3>Other File 2</h3>
+        <p class="timestamp">Last modified: 19:46</p>
+        <audio controls>
+            <source src="/media/previews/1739d094-c523-4b22-b182-48f18586fcb6.mp3?t=1" type="audio/mpeg">
+        </audio>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const audioPlayers = document.querySelectorAll('audio');
+            
+            // Add event listeners to all audio players
+            audioPlayers.forEach(player => {
+                // Log when audio starts playing
+                player.addEventListener('play', function() {
+                    console.log('Playing:', this.querySelector('source').src);
+                });
+                
+                // Log any errors
+                player.addEventListener('error', function() {
+                    console.error('Error playing:', this.querySelector('source').src);
+                    console.log('Error details:', this.error);
+                });
+            });
+            
+            // Add button to clear browser cache
+            const clearCacheBtn = document.createElement('button');
+            clearCacheBtn.textContent = 'Clear Cache and Reload';
+            clearCacheBtn.addEventListener('click', function() {
+                window.location.reload(true); // Force reload from server
+            });
+            document.body.appendChild(clearCacheBtn);
+        });
+    </script>
+</body>
+</html>

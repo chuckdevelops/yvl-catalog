@@ -1578,12 +1578,82 @@ def coming_soon(request):
     """Coming soon page"""
     return render(request, 'catalog/coming_soon.html')
 
+def serve_audio_proxy(request, random, filename):
+    """Proxy audio file server with random parameter in URL to prevent caching"""
+    import os
+    from django.conf import settings
+    from django.http import FileResponse, Http404
+    import logging
+    import hashlib
+    
+    # Setup logging
+    logger = logging.getLogger(__name__)
+    
+    # Enhanced logging with more context
+    logger.info(f"[AUDIO PROXY] Serving audio via proxy: {filename}")
+    logger.info(f"[AUDIO PROXY] Random parameter: {random}")
+    logger.info(f"[AUDIO PROXY] Request URL: {request.path}")
+    
+    # Get the absolute path to the file
+    file_path = os.path.join(settings.MEDIA_ROOT, 'previews', filename)
+    
+    # Check if file exists
+    if not os.path.exists(file_path):
+        logger.error(f"[AUDIO PROXY] File not found: {file_path}")
+        raise Http404(f"Audio file {filename} not found")
+    
+    # Calculate and log file hash
+    with open(file_path, 'rb') as f:
+        file_hash = hashlib.md5(f.read()).hexdigest()
+    logger.info(f"[AUDIO PROXY] File hash: {file_hash}")
+    
+    # Serve the file with extreme anti-caching measures
+    try:
+        # Use fresh file handle each time
+        file_handle = open(file_path, 'rb')
+        
+        # Create response
+        response = FileResponse(file_handle, content_type='audio/mpeg')
+        
+        # Set random filename in Content-Disposition to prevent browser caching
+        random_filename = f"preview-{random}-{filename}"
+        response['Content-Disposition'] = f'inline; filename="{random_filename}"'
+        
+        # Set content length
+        file_size = os.path.getsize(file_path)
+        response['Content-Length'] = str(file_size)
+        
+        # Enable CORS
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Range'
+        
+        # Extreme anti-caching headers
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0, private'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '-1'
+        response['Vary'] = '*'
+        
+        # Add unique ETag
+        etag = hashlib.md5(f"{random}:{filename}:{file_hash}").hexdigest()
+        response['ETag'] = f'"{etag}"'
+        
+        # Add range support
+        response['Accept-Ranges'] = 'bytes'
+        
+        logger.info(f"[AUDIO PROXY] Successfully serving {filename} via proxy with random={random}")
+        return response
+    except Exception as e:
+        logger.error(f"[AUDIO PROXY] Error serving file {filename}: {str(e)}")
+        raise
+
 def serve_audio(request, filename):
     """Direct audio file server"""
     import os
     from django.conf import settings
     from django.http import FileResponse, Http404
     import logging
+    import hashlib
     
     # Setup logging
     logger = logging.getLogger(__name__)
@@ -1594,6 +1664,11 @@ def serve_audio(request, filename):
     logger.info(f"[AUDIO SERVE] Request method: {request.method}")
     logger.info(f"[AUDIO SERVE] User agent: {request.META.get('HTTP_USER_AGENT', 'Unknown')}")
     logger.info(f"[AUDIO SERVE] Referrer: {request.META.get('HTTP_REFERER', 'None')}")
+    
+    # Get any query parameters (used for cache busting)
+    query_params = request.GET.dict()
+    if query_params:
+        logger.info(f"[AUDIO SERVE] Query params: {query_params}")
     
     # Security check to prevent directory traversal
     if '..' in filename or filename.startswith('/'):
@@ -1609,7 +1684,10 @@ def serve_audio(request, filename):
         logger.error(f"[AUDIO SERVE] File not found: {file_path}")
         raise Http404(f"Audio file {filename} not found")
     
-    logger.info(f"[AUDIO SERVE] File exists, size: {os.path.getsize(file_path)} bytes")
+    # Calculate and log file hash
+    with open(file_path, 'rb') as f:
+        file_hash = hashlib.md5(f.read()).hexdigest()
+    logger.info(f"[AUDIO SERVE] File exists, size: {os.path.getsize(file_path)} bytes, hash: {file_hash}")
     
     # Check file readability and permissions
     if not os.access(file_path, os.R_OK):
@@ -1622,8 +1700,11 @@ def serve_audio(request, filename):
     
     # Serve the file
     try:
-        # Use 'rb' mode to ensure binary reading
-        response = FileResponse(open(file_path, 'rb'), content_type='audio/mpeg')
+        # Use fresh file handle each time to avoid caching issues
+        file_handle = open(file_path, 'rb')
+        
+        # Create response with proper content type
+        response = FileResponse(file_handle, content_type='audio/mpeg')
         response['Content-Disposition'] = f'inline; filename="{filename}"'
         
         # Set content length
@@ -1635,14 +1716,19 @@ def serve_audio(request, filename):
         response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
         response['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Range'
         
-        # Disable caching
-        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        # Aggressively disable caching
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
         response['Pragma'] = 'no-cache'
         response['Expires'] = '0'
+        
+        # Add unique ETag to force browsers to revalidate
+        etag = hashlib.md5(f"{filename}:{os.path.getmtime(file_path)}:{file_hash}".encode()).hexdigest()
+        response['ETag'] = f'"{etag}"'
         
         # Add range support explicitly
         response['Accept-Ranges'] = 'bytes'
         
+        logger.info(f"[AUDIO SERVE] Successfully created audio response with ETag: {etag}")
         logger.info(f"[AUDIO SERVE] Successfully created response for {filename}")
         print(f"[AUDIO SERVE] Successfully serving {filename} from {file_path}")
         return response

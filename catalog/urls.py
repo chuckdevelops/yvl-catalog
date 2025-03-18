@@ -35,6 +35,15 @@ urlpatterns = [
     # Direct audio serving page (using custom Django view to serve audio)
     path('audio-serve-test/', TemplateView.as_view(template_name='direct/audio_serve.html'), name='audio_serve_test'),
     
+    # Fixed audio test page (testing after bitrate fix)
+    path('audio-test-fixed/', TemplateView.as_view(template_name='direct/audio_test_fixed.html'), name='audio_test_fixed'),
+    
+    # Direct audio comparison page (completely bypassing Django views)
+    path('audio-compare-direct/', TemplateView.as_view(template_name='direct/audio_compare_direct.html'), name='audio_compare_direct'),
+    
+    # Custom proxied audio files with random parameter in URL
+    path('static/proxy-<str:random>-<str:filename>', views.serve_audio_proxy, name='serve_audio_proxy'),
+    
     # Direct audio serving (custom handler for each file)
     path('audio-serve/<str:filename>', views.serve_audio, name='serve_audio'),
     

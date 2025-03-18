@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Direct Audio File Comparison</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .audio-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        audio {
+            width: 100%;
+            margin: 10px 0;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        button {
+            background: #4a5568;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin-right: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #info {
+            background: #f5f5f5;
+            padding: 16px;
+            border-radius: 4px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Direct Audio File Comparison</h1>
+    <p>This page uses direct static file references to play audio files side by side.</p>
+    
+    <div id="info">
+        <h3>Important Notes:</h3>
+        <ul>
+            <li>All files have been re-encoded to 128kbps, 48kHz sample rate</li>
+            <li>Files have unique content based on MD5 hash comparison</li>
+            <li>This page uses direct static file URLs that bypass Django's URL routing</li>
+        </ul>
+    </div>
+    
+    <div class="audio-card">
+        <h2>File 1: Reference File (ID 430)</h2>
+        <p>Filename: 56711856-592a-4f2b-9de9-e6781f8deff1.mp3</p>
+        <audio id="audio1" controls></audio>
+    </div>
+    
+    <div class="audio-card">
+        <h2>File 2: Updated File</h2>
+        <p>Filename: 836c4cc1-2814-4127-9233-1688b8bb2fc4.mp3</p>
+        <audio id="audio2" controls></audio>
+    </div>
+    
+    <div class="audio-card">
+        <h2>File 3: Different Track</h2>
+        <p>Filename: 29b7a015-5f74-4063-96b1-1a63bf7192a7.mp3</p>
+        <audio id="audio3" controls></audio>
+    </div>
+    
+    <div class="controls">
+        <button onclick="loadVersions('original')">Load Original Files</button>
+        <button onclick="loadVersions('proxied')">Load Proxied Files</button>
+        <button onclick="loadVersions('custom')">Load With Random Parameter</button>
+        <button onclick="playAll()">Play All</button>
+        <button onclick="stopAll()">Stop All</button>
+    </div>
+    
+    <script>
+        // Function to create a proxy URL with a random parameter
+        function proxyUrl(filename) {
+            const random = Math.floor(Math.random() * 1000000);
+            return `/static/proxy-${random}-${filename}`;
+        }
+        
+        // Function to load different versions of the files
+        function loadVersions(type) {
+            const audio1 = document.getElementById('audio1');
+            const audio2 = document.getElementById('audio2');
+            const audio3 = document.getElementById('audio3');
+            
+            // Reset players
+            audio1.pause();
+            audio2.pause();
+            audio3.pause();
+            
+            if (type === 'original') {
+                // Use direct static URLs with timestamps to prevent caching
+                const timestamp = new Date().getTime();
+                audio1.src = `/media/previews/56711856-592a-4f2b-9de9-e6781f8deff1.mp3?t=${timestamp}`;
+                audio2.src = `/media/previews/836c4cc1-2814-4127-9233-1688b8bb2fc4.mp3?t=${timestamp}`;
+                audio3.src = `/media/previews/29b7a015-5f74-4063-96b1-1a63bf7192a7.mp3?t=${timestamp}`;
+            } else if (type === 'proxied') {
+                // Use audio-serve URLs with timestamps
+                const timestamp = new Date().getTime();
+                audio1.src = `/audio-serve/56711856-592a-4f2b-9de9-e6781f8deff1.mp3?t=${timestamp}`;
+                audio2.src = `/audio-serve/836c4cc1-2814-4127-9233-1688b8bb2fc4.mp3?t=${timestamp}`;
+                audio3.src = `/audio-serve/29b7a015-5f74-4063-96b1-1a63bf7192a7.mp3?t=${timestamp}`;
+            } else if (type === 'custom') {
+                // Use completely different file names by adding a random prefix
+                audio1.src = proxyUrl('56711856-592a-4f2b-9de9-e6781f8deff1.mp3');
+                audio2.src = proxyUrl('836c4cc1-2814-4127-9233-1688b8bb2fc4.mp3');
+                audio3.src = proxyUrl('29b7a015-5f74-4063-96b1-1a63bf7192a7.mp3');
+            }
+            
+            // Load new sources
+            audio1.load();
+            audio2.load();
+            audio3.load();
+            
+            console.log(`Loaded ${type} versions`);
+            console.log(`Audio 1: ${audio1.src}`);
+            console.log(`Audio 2: ${audio2.src}`);
+            console.log(`Audio 3: ${audio3.src}`);
+            
+            document.getElementById('info').innerHTML = `
+                <h3>Current Configuration:</h3>
+                <p><strong>Mode:</strong> ${type}</p>
+                <p><strong>Audio 1:</strong> ${audio1.src}</p>
+                <p><strong>Audio 2:</strong> ${audio2.src}</p>
+                <p><strong>Audio 3:</strong> ${audio3.src}</p>
+            `;
+        }
+        
+        // Function to download files directly and play them with the Web Audio API
+        function playDirectlyWithWebAudio(url, audioElement) {
+            fetch(url)
+                .then(response => response.arrayBuffer())
+                .then(arrayBuffer => {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    return audioContext.decodeAudioData(arrayBuffer);
+                })
+                .then(audioBuffer => {
+                    const source = audioContext.createBufferSource();
+                    source.buffer = audioBuffer;
+                    source.connect(audioContext.destination);
+                    source.start(0);
+                    
+                    // Save source to stop it later
+                    audioElement._webAudioSource = source;
+                    console.log(`Playing ${url} with Web Audio API`);
+                })
+                .catch(error => {
+                    console.error('Error playing audio:', error);
+                });
+        }
+        
+        // Function to play all audio files
+        function playAll() {
+            const audios = document.querySelectorAll('audio');
+            audios.forEach(audio => {
+                // First try to play with the HTML5 Audio element
+                audio.play().catch(error => {
+                    console.warn(`Failed to play with HTML5 Audio: ${error}`);
+                    // If that fails, try using Web Audio API
+                    playDirectlyWithWebAudio(audio.src, audio);
+                });
+            });
+        }
+        
+        // Function to stop all audio files
+        function stopAll() {
+            const audios = document.querySelectorAll('audio');
+            audios.forEach(audio => {
+                audio.pause();
+                audio.currentTime = 0;
+                
+                // Also stop Web Audio sources if they exist
+                if (audio._webAudioSource) {
+                    try {
+                        audio._webAudioSource.stop();
+                    } catch (e) {
+                        // Ignore errors if already stopped
+                    }
+                }
+            });
+        }
+        
+        // Load the original version on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadVersions('original');
+        });
+    </script>
+</body>
+</html>

@@ -72,6 +72,7 @@ def serve_media_audio(request, filename):
         return response
     except Exception as e:
         logger.error(f"[MEDIA SERVE] Error serving file {filename}: {str(e)}")
+
         raise
 
 urlpatterns = [

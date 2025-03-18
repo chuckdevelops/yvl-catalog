@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Audio Playback Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .player { margin-bottom: 30px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        audio { width: 100%; margin: 10px 0; }
+        button { padding: 8px 15px; margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Local Audio Test - Are these files unique?</h1>
+    <p>This page tests if the audio files are actually unique when played locally (outside the web server).</p>
+    
+    <div class="player">
+        <h3>File 1 (Known working reference file)</h3>
+        <audio controls src="file1.mp3"></audio>
+        <p>Filename: 56711856-592a-4f2b-9de9-e6781f8deff1.mp3</p>
+        <button onclick="checkAudioData('file1.mp3', 'file1-results')">Analyze Audio Data</button>
+        <div id="file1-results"></div>
+    </div>
+    
+    <div class="player">
+        <h3>File 2</h3>
+        <audio controls src="file2.mp3"></audio>
+        <p>Filename: 836c4cc1-2814-4127-9233-1688b8bb2fc4.mp3</p>
+        <button onclick="checkAudioData('file2.mp3', 'file2-results')">Analyze Audio Data</button>
+        <div id="file2-results"></div>
+    </div>
+    
+    <div class="player">
+        <h3>File 3</h3>
+        <audio controls src="file3.mp3"></audio>
+        <p>Filename: 29b7a015-5f74-4063-96b1-1a63bf7192a7.mp3</p>
+        <button onclick="checkAudioData('file3.mp3', 'file3-results')">Analyze Audio Data</button>
+        <div id="file3-results"></div>
+    </div>
+
+    <div>
+        <h2>Audio Analysis Results</h2>
+        <p>Click the "Analyze Audio Data" buttons above to check each file's audio characteristics.</p>
+        <p>This will calculate a simple "audio fingerprint" to compare files.</p>
+    </div>
+
+    <script>
+        // Function to create a simple audio fingerprint from sample data
+        function getAudioFingerprint(audioBuffer) {
+            const data = audioBuffer.getChannelData(0);
+            const sampleSize = 1000;
+            const samples = [];
+            
+            // Take samples from different parts of the audio
+            for (let i = 0; i < 5; i++) {
+                const startPoint = Math.floor(i * data.length / 5);
+                let sum = 0;
+                for (let j = 0; j < sampleSize; j++) {
+                    if (startPoint + j < data.length) {
+                        sum += Math.abs(data[startPoint + j]);
+                    }
+                }
+                samples.push(sum / sampleSize);
+            }
+            
+            return samples;
+        }
+
+        // Function to analyze an audio file
+        function checkAudioData(url, resultElementId) {
+            const resultElement = document.getElementById(resultElementId);
+            resultElement.innerHTML = "Analyzing...";
+            
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            fetch(url)
+                .then(response => response.arrayBuffer())
+                .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+                .then(audioBuffer => {
+                    const duration = audioBuffer.duration;
+                    const sampleRate = audioBuffer.sampleRate;
+                    const fingerprint = getAudioFingerprint(audioBuffer);
+                    
+                    resultElement.innerHTML = `
+                        <strong>Duration:</strong> ${duration.toFixed(2)} seconds<br>
+                        <strong>Sample Rate:</strong> ${sampleRate} Hz<br>
+                        <strong>Channels:</strong> ${audioBuffer.numberOfChannels}<br>
+                        <strong>Audio Fingerprint:</strong> [${fingerprint.map(v => v.toFixed(6)).join(', ')}]<br>
+                    `;
+                })
+                .catch(error => {
+                    resultElement.innerHTML = `Error analyzing audio: ${error.message}`;
+                    console.error(error);
+                });
+        }
+    </script>
+</body>
+</html>

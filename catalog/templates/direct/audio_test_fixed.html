@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Player Test - Fixed Version</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .audio-container {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border: 1px solid #eee;
+            border-radius: 8px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .status {
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        audio {
+            width: 100%;
+            margin: 1rem 0;
+        }
+        .info {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 0.5rem;
+        }
+        #debug-log {
+            background: #f5f5f5;
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 2rem;
+        }
+        button {
+            padding: 0.5rem 1rem;
+            margin-top: 1rem;
+            background: #4a5568;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #2d3748;
+        }
+    </style>
+</head>
+<body>
+    <h1>Audio Player Test - Fixed Version</h1>
+    <p>This page tests audio playback with different methods after applying the bitrate fix.</p>
+    <p><strong>Cache-busting timestamp:</strong> <span id="timestamp"></span></p>
+    
+    <div class="audio-container">
+        <h2>Method 1: Direct URL (/media/previews/...)</h2>
+        <audio id="direct-player" controls>
+            <source id="direct-source" src="" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div class="status" id="direct-status">Status: Loading...</div>
+        <div class="info">
+            File: <code>56711856-592a-4f2b-9de9-e6781f8deff1.mp3</code> (Reference file, ID 430)
+        </div>
+        <button onclick="logAudioDetails('direct-player')">Log Audio Details</button>
+    </div>
+
+    <div class="audio-container">
+        <h2>Method 2: Server Handler (/audio-serve/...)</h2>
+        <audio id="serve-player" controls>
+            <source id="serve-source" src="" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div class="status" id="serve-status">Status: Loading...</div>
+        <div class="info">
+            File: <code>56711856-592a-4f2b-9de9-e6781f8deff1.mp3</code> (Reference file, ID 430)
+        </div>
+        <button onclick="logAudioDetails('serve-player')">Log Audio Details</button>
+    </div>
+
+    <div class="audio-container">
+        <h2>Another Song Test - Method 1</h2>
+        <audio id="direct-player2" controls>
+            <source id="direct-source2" src="" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div class="status" id="direct-status2">Status: Loading...</div>
+        <div class="info">
+            File: <code>836c4cc1-2814-4127-9233-1688b8bb2fc4.mp3</code> (Recently updated file)
+        </div>
+        <button onclick="logAudioDetails('direct-player2')">Log Audio Details</button>
+    </div>
+
+    <div class="audio-container">
+        <h2>Another Song Test - Method 2</h2>
+        <audio id="serve-player2" controls>
+            <source id="serve-source2" src="" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div class="status" id="serve-status2">Status: Loading...</div>
+        <div class="info">
+            File: <code>836c4cc1-2814-4127-9233-1688b8bb2fc4.mp3</code> (Recently updated file)
+        </div>
+        <button onclick="logAudioDetails('serve-player2')">Log Audio Details</button>
+    </div>
+
+    <div class="audio-container">
+        <h2>Third File Test - Method 1</h2>
+        <audio id="direct-player3" controls>
+            <source id="direct-source3" src="" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div class="status" id="direct-status3">Status: Loading...</div>
+        <div class="info">
+            File: <code>29b7a015-5f74-4063-96b1-1a63bf7192a7.mp3</code> (Different track)
+        </div>
+        <button onclick="logAudioDetails('direct-player3')">Log Audio Details</button>
+    </div>
+
+    <h2>Debug Log</h2>
+    <div id="debug-log"></div>
+    <button onclick="clearCache()">Clear Browser Cache</button>
+    <button onclick="reloadWithNewTimestamp()">Reload with New Timestamp</button>
+
+    <script>
+        // Set a cache-busting timestamp
+        const timestamp = new Date().getTime();
+        document.getElementById('timestamp').textContent = timestamp;
+        
+        // Update source URLs with timestamps
+        document.getElementById('direct-source').src = `/media/previews/56711856-592a-4f2b-9de9-e6781f8deff1.mp3?t=${timestamp}`;
+        document.getElementById('serve-source').src = `/audio-serve/56711856-592a-4f2b-9de9-e6781f8deff1.mp3?t=${timestamp}`;
+        document.getElementById('direct-source2').src = `/media/previews/836c4cc1-2814-4127-9233-1688b8bb2fc4.mp3?t=${timestamp}`;
+        document.getElementById('serve-source2').src = `/audio-serve/836c4cc1-2814-4127-9233-1688b8bb2fc4.mp3?t=${timestamp}`;
+        document.getElementById('direct-source3').src = `/media/previews/29b7a015-5f74-4063-96b1-1a63bf7192a7.mp3?t=${timestamp}`;
+        
+        // Debug log function
+        function logToDebug(message) {
+            const logEl = document.getElementById('debug-log');
+            const time = new Date().toLocaleTimeString();
+            logEl.innerHTML += `[${time}] ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(message);
+        }
+        
+        // Audio player setup
+        document.addEventListener('DOMContentLoaded', function() {
+            logToDebug('Page loaded. Setting up audio players...');
+            
+            setupAudioPlayer('direct-player', 'direct-status', 'Direct URL player 1');
+            setupAudioPlayer('serve-player', 'serve-status', 'Server handler player 1');
+            setupAudioPlayer('direct-player2', 'direct-status2', 'Direct URL player 2');
+            setupAudioPlayer('serve-player2', 'serve-status2', 'Server handler player 2');
+            setupAudioPlayer('direct-player3', 'direct-status3', 'Direct URL player 3');
+            
+            // Force reload audio elements
+            const audioElements = document.querySelectorAll('audio');
+            audioElements.forEach(audio => {
+                audio.load();
+                logToDebug(`Loaded audio: ${audio.id}`);
+            });
+        });
+        
+        function setupAudioPlayer(playerId, statusId, playerName) {
+            const player = document.getElementById(playerId);
+            const statusEl = document.getElementById(statusId);
+            
+            // Log URL
+            const sourceEl = player.querySelector('source');
+            logToDebug(`${playerName} URL: ${sourceEl.src}`);
+            
+            player.addEventListener('loadedmetadata', function() {
+                statusEl.textContent = `Status: Ready to play (${player.duration.toFixed(2)}s)`;
+                statusEl.className = 'status success';
+                logToDebug(`${playerName} loaded metadata. Duration: ${player.duration.toFixed(2)}s`);
+            });
+            
+            player.addEventListener('canplaythrough', function() {
+                logToDebug(`${playerName} can play through`);
+            });
+            
+            player.addEventListener('play', function() {
+                logToDebug(`${playerName} started playing`);
+            });
+            
+            player.addEventListener('error', function() {
+                statusEl.textContent = 'Status: Error loading audio';
+                statusEl.className = 'status error';
+                logToDebug(`${playerName} error: ${player.error ? player.error.message : 'Unknown error'}`);
+            });
+        }
+        
+        function logAudioDetails(playerId) {
+            const player = document.getElementById(playerId);
+            const source = player.querySelector('source');
+            
+            logToDebug(`--- Audio details for ${playerId} ---`);
+            logToDebug(`Source URL: ${source.src}`);
+            logToDebug(`Current time: ${player.currentTime.toFixed(2)}s`);
+            logToDebug(`Duration: ${player.duration ? player.duration.toFixed(2) : 'unknown'}s`);
+            logToDebug(`Paused: ${player.paused}`);
+            logToDebug(`Ended: ${player.ended}`);
+            logToDebug(`Volume: ${player.volume}`);
+            logToDebug(`Ready state: ${player.readyState}`);
+            logToDebug(`Network state: ${player.networkState}`);
+            
+            // Try to get some audio data if possible
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaElementSource(player);
+                source.connect(analyser);
+                analyser.connect(audioContext.destination);
+                
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(dataArray);
+                
+                // Log the first 10 frequency values
+                const freqSample = Array.from(dataArray.slice(0, 10)).join(', ');
+                logToDebug(`Frequency sample: [${freqSample}]`);
+            } catch (e) {
+                logToDebug(`Could not analyze audio: ${e.message}`);
+            }
+            
+            logToDebug(`-------------------------------`);
+        }
+        
+        function clearCache() {
+            logToDebug('Attempting to clear cache...');
+            
+            // Clear cache in memory
+            const audioElements = document.querySelectorAll('audio');
+            audioElements.forEach(audio => {
+                audio.src = '';
+                audio.load();
+            });
+            
+            // Reload sources with new timestamp
+            reloadWithNewTimestamp();
+        }
+        
+        function reloadWithNewTimestamp() {
+            const newTimestamp = new Date().getTime();
+            logToDebug(`Reloading with new timestamp: ${newTimestamp}`);
+            
+            document.getElementById('timestamp').textContent = newTimestamp;
+            
+            // Update source URLs with new timestamp
+            document.getElementById('direct-source').src = `/media/previews/56711856-592a-4f2b-9de9-e6781f8deff1.mp3?t=${newTimestamp}`;
+            document.getElementById('serve-source').src = `/audio-serve/56711856-592a-4f2b-9de9-e6781f8deff1.mp3?t=${newTimestamp}`;
+            document.getElementById('direct-source2').src = `/media/previews/836c4cc1-2814-4127-9233-1688b8bb2fc4.mp3?t=${newTimestamp}`;
+            document.getElementById('serve-source2').src = `/audio-serve/836c4cc1-2814-4127-9233-1688b8bb2fc4.mp3?t=${newTimestamp}`;
+            document.getElementById('direct-source3').src = `/media/previews/29b7a015-5f74-4063-96b1-1a63bf7192a7.mp3?t=${newTimestamp}`;
+            
+            // Reload audio elements
+            const audioElements = document.querySelectorAll('audio');
+            audioElements.forEach(audio => {
+                audio.load();
+                logToDebug(`Reloaded audio: ${audio.id}`);
+            });
+        }
+    </script>
+</body>
+</html>
