@@ -110,7 +110,12 @@
 
                         <tr>
                             <td>
-                                <a href="{% url 'catalog:song_detail' song_id=song.id %}">{{ song.name }}</a>
+                                <a href="{% url 'catalog:song_detail' song_id=song.id %}">
+                                    {{ song.name }}
+                                    {% if song.preview_url or song.has_playable_link %}
+                                        <i class="fas fa-music text-primary" title="Has audio preview"></i>
+                                    {% endif %}
+                                </a>
                                 {% if song.file_date == 'Album Track' %}
                                     <span class="badge bg-secondary">Official Album Track</span>
                                 {% endif %}

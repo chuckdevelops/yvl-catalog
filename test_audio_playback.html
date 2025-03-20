@@ -3,306 +3,238 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Preview Test</title>
+    <title>Audio Playback Test</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            max-width: 1000px;
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #f9f9f9;
+            padding: 2rem;
         }
-        h1, h2, h3 {
-            margin-top: 1.5em;
-        }
-        .preview-item {
-            background-color: white;
+        .audio-card {
+            border: 1px solid #ddd;
             border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 16px;
+            margin-bottom: 20px;
         }
-        .preview-item h3 {
-            margin-top: 0;
-            margin-bottom: 10px;
-        }
-        .preview-info {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        .preview-info div {
-            background-color: #f0f0f0;
-            padding: 5px 10px;
+        .debug-info {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 0.9em;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            font-size: 12px;
+            color: #333;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        h3 {
+            margin-top: 0;
         }
         audio {
             width: 100%;
             margin: 10px 0;
         }
-        .controls {
-            position: sticky;
-            top: 0;
-            background-color: rgba(255,255,255,0.95);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            z-index: 100;
-        }
-        button {
-            background-color: #4361ee;
+        .btn {
+            display: inline-block;
+            margin-right: 5px;
+            padding: 6px 12px;
+            background-color: #6c757d;
             color: white;
             border: none;
-            padding: 8px 15px;
             border-radius: 4px;
             cursor: pointer;
-            margin-right: 10px;
         }
-        button:hover {
-            background-color: #3a56d4;
+        .btn-primary {
+            background-color: #007bff;
         }
-        .status {
-            font-weight: bold;
-            margin-top: 10px;
+        .btn-success {
+            background-color: #28a745;
         }
-        .loading {
-            color: #f39c12;
-        }
-        .success {
-            color: #2ecc71;
-        }
-        .error {
-            color: #e74c3c;
+        .btn-danger {
+            background-color: #dc3545;
         }
     </style>
 </head>
 <body>
-    <h1>Audio Preview Test</h1>
-    <p>This page tests if unique audio previews are working correctly for each song.</p>
+    <h1>Audio Playback Test Page</h1>
+    <p>This page tests different approaches to loading audio files in the browser.</p>
 
-    <div class="controls">
-        <button id="loadSongs">Load Songs</button>
-        <button id="playAll">Play All (5 sec each)</button>
-        <button id="stopAll">Stop All</button>
-        <div id="status" class="status">Ready to load songs...</div>
+    <div class="audio-card">
+        <h3>UUID-Based Audio (Working Example)</h3>
+        <div class="small text-muted mb-2">
+            Preview URL: <code>/media/previews/56711856-592a-4f2b-9de9-e6781f8deff1.mp3</code>
+        </div>
+        <audio id="player-uuid" data-player-id="player-uuid" controls>
+            <source src="/audio-serve/56711856-592a-4f2b-9de9-e6781f8deff1.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div id="player-uuid-status" class="text-muted small mt-1" style="display: none;"></div>
+        <div class="debug-info" id="debug-uuid"></div>
     </div>
 
-    <div id="previews"></div>
+    <div class="audio-card">
+        <h3>Hash-Based Audio (Problem Example)</h3>
+        <div class="small text-muted mb-2">
+            Preview URL: <code>/media/previews/836c4cc1-2814-4127-9233-1688b8bb2fc4.mp3</code>
+        </div>
+        <audio id="player-hash" data-player-id="player-hash" controls>
+            <source src="/audio-serve/0736dfc051860b5133a8ce54ecc65898.mp3" type="audio/mpeg" data-original-uuid="836c4cc1-2814-4127-9233-1688b8bb2fc4">
+            Your browser does not support the audio element.
+        </audio>
+        <div id="player-hash-status" class="text-muted small mt-1" style="display: none;"></div>
+        <div class="debug-info" id="debug-hash"></div>
+    </div>
+
+    <div class="audio-card">
+        <h3>Direct URL Audio</h3>
+        <div class="small text-muted mb-2">
+            Preview URL: <code>/media/previews/29b7a015-5f74-4063-96b1-1a63bf7192a7.mp3</code>
+        </div>
+        <audio id="player-direct" data-player-id="player-direct" controls>
+            <source src="/media/previews/29b7a015-5f74-4063-96b1-1a63bf7192a7.mp3" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div id="player-direct-status" class="text-muted small mt-1" style="display: none;"></div>
+        <div class="debug-info" id="debug-direct"></div>
+    </div>
+    
+    <div class="audio-card">
+        <h3>Re-encoded Audio Test (ID 442)</h3>
+        <div class="small text-muted mb-2">
+            Preview URL: <code>/media/previews/3cb968d4-4c78-43d5-b207-97d879d32d31.mp3</code>
+        </div>
+        <audio id="player-reencoded" data-player-id="player-reencoded" controls>
+            <source src="/media/previews/3cb968d4-4c78-43d5-b207-97d879d32d31.mp3?t=1710887349" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio>
+        <div id="player-reencoded-status" class="text-muted small mt-1" style="display: none;"></div>
+        <div class="debug-info" id="debug-reencoded"></div>
+    </div>
+    
+    <div class="audio-card">
+        <h3>Compare Audio Sources Test</h3>
+        <div class="debug-info" id="debug-compare">Testing both URL formats for the same file:</div>
+        <div class="buttons">
+            <button class="btn btn-primary" onclick="testBothSources()">Test Both URL Formats</button>
+        </div>
+        <div>
+            <h4>Audio-serve route:</h4>
+            <audio id="player-compare1" controls>
+                <source src="/audio-serve/3cb968d4-4c78-43d5-b207-97d879d32d31.mp3?t=1710887349" type="audio/mpeg">
+            </audio>
+        </div>
+        <div>
+            <h4>Direct media URL:</h4>
+            <audio id="player-compare2" controls>
+                <source src="/media/previews/3cb968d4-4c78-43d5-b207-97d879d32d31.mp3?t=1710887349" type="audio/mpeg">
+            </audio>
+        </div>
+    </div>
+
+    <div class="buttons">
+        <button class="btn btn-primary" onclick="logAllEvents()">Log All Events</button>
+        <button class="btn btn-success" onclick="fixAllSources()">Fix All Sources</button>
+        <button class="btn btn-danger" onclick="reloadPage()">Reload Page</button>
+    </div>
 
     <script>
-        // DOM Elements
-        const loadSongsBtn = document.getElementById('loadSongs');
-        const playAllBtn = document.getElementById('playAll');
-        const stopAllBtn = document.getElementById('stopAll');
-        const statusEl = document.getElementById('status');
-        const previewsContainer = document.getElementById('previews');
-
-        // Global variables
-        let songs = [];
-        let players = [];
-        let isPlaying = false;
-        let currentPlayerIndex = -1;
-
-        // Event Listeners
-        loadSongsBtn.addEventListener('click', loadSongs);
-        playAllBtn.addEventListener('click', playAllPreviews);
-        stopAllBtn.addEventListener('click', stopAllPreviews);
-
-        // Functions
-        async function loadSongs() {
-            statusEl.textContent = 'Loading songs...';
-            statusEl.className = 'status loading';
+        // Add event logging to all audio players
+        function logAllEvents() {
+            const players = document.querySelectorAll('audio');
+            const events = ['loadstart', 'durationchange', 'loadedmetadata', 'loadeddata', 'progress', 'canplay', 'canplaythrough', 'suspend', 'abort', 'error', 'emptied', 'stalled', 'play', 'playing', 'pause', 'waiting', 'seeking', 'seeked', 'ended', 'ratechange', 'volumechange'];
             
-            try {
-                // Get a list of songs with preview URLs
-                const response = await fetch('/api/preview-test-songs/');
-                const data = await response.json();
+            players.forEach(player => {
+                const debugElement = document.getElementById(`debug-${player.id.split('-')[1]}`);
                 
-                if (!data.songs || data.songs.length === 0) {
-                    throw new Error('No songs found with preview URLs');
-                }
+                // Clear debug info
+                debugElement.innerHTML = "Event Log:<br>";
                 
-                songs = data.songs;
-                statusEl.textContent = `Loaded ${songs.length} songs with preview URLs`;
-                statusEl.className = 'status success';
-                
-                // Create preview players
-                createPreviewPlayers();
-                
-            } catch (error) {
-                console.error('Error loading songs:', error);
-                statusEl.textContent = `Error: ${error.message || 'Failed to load songs'}`;
-                statusEl.className = 'status error';
-                
-                // Fallback: Use demo data
-                useDemoData();
-            }
-        }
-
-        function useDemoData() {
-            // Demo data if API isn't available
-            songs = [
-                { id: 430, name: "Reference Song (ID 430)", preview_url: "/media/previews/56711856-592a-4f2b-9de9-e6781f8deff1.mp3" },
-                { id: 431, name: "Song 431", preview_url: "/media/previews/0e75dda9-fc84-4e1a-9b2d-85cec2dfbba6.mp3" },
-                { id: 432, name: "Song 432", preview_url: "/media/previews/1739d094-c523-4b22-b182-48f18586fcb6.mp3" },
-                { id: 433, name: "Song 433", preview_url: "/media/previews/281810ee-3d37-43f6-91db-df2f9288d745.mp3" },
-                { id: 434, name: "Song 434", preview_url: "/media/previews/29b7a015-5f74-4063-96b1-1a63bf7192a7.mp3" },
-                { id: 435, name: "Song 435", preview_url: "/media/previews/54bfdce3-bfc3-45df-9004-7c571f8f8215.mp3" }
-            ];
-            statusEl.textContent = `Using demo data with ${songs.length} songs`;
-            statusEl.className = 'status success';
-            
-            // Create preview players
-            createPreviewPlayers();
-        }
-
-        function createPreviewPlayers() {
-            previewsContainer.innerHTML = '';
-            players = [];
-            
-            songs.forEach((song, index) => {
-                const previewItem = document.createElement('div');
-                previewItem.className = 'preview-item';
-                
-                const title = document.createElement('h3');
-                title.textContent = `${song.name} (ID: ${song.id})`;
-                
-                const info = document.createElement('div');
-                info.className = 'preview-info';
-                
-                const urlInfo = document.createElement('div');
-                const filename = song.preview_url.split('/').pop();
-                urlInfo.textContent = `File: ${filename}`;
-                
-                const player = document.createElement('audio');
-                player.controls = true;
-                player.src = song.preview_url;
-                player.dataset.songId = song.id;
-                
-                // Store reference to the audio element
-                players.push(player);
-                
-                // Event listeners
-                player.addEventListener('play', () => {
-                    // Stop other players when this one starts
-                    players.forEach((p, i) => {
-                        if (i !== index && !p.paused) {
-                            p.pause();
+                // Set up event listeners
+                events.forEach(eventName => {
+                    player.addEventListener(eventName, function(e) {
+                        const timestamp = new Date().toISOString().substr(11, 12);
+                        let logInfo = `${timestamp} - ${eventName}`;
+                        
+                        // Add extra info for error events
+                        if (eventName === 'error' && player.error) {
+                            let errorMessage = 'Unknown error';
+                            switch(player.error.code) {
+                                case MediaError.MEDIA_ERR_ABORTED:
+                                    errorMessage = 'Aborted';
+                                    break;
+                                case MediaError.MEDIA_ERR_NETWORK:
+                                    errorMessage = 'Network error';
+                                    break;
+                                case MediaError.MEDIA_ERR_DECODE:
+                                    errorMessage = 'Decode error';
+                                    break;
+                                case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                                    errorMessage = 'Source not supported';
+                                    break;
+                            }
+                            logInfo += ` (${errorMessage} - Code: ${player.error.code})`;
                         }
+                        
+                        // Add source information
+                        if (eventName === 'loadstart' || eventName === 'error') {
+                            logInfo += `<br>Source: ${player.currentSrc || player.querySelector('source').src}`;
+                        }
+                        
+                        debugElement.innerHTML += logInfo + "<br>";
+                        // Scroll to bottom
+                        debugElement.scrollTop = debugElement.scrollHeight;
                     });
                 });
                 
-                player.addEventListener('ended', () => {
-                    // For sequential play
-                    if (isPlaying && currentPlayerIndex === index) {
-                        playNextPreview();
-                    }
-                });
-                
-                // Add a play button
-                const playButton = document.createElement('button');
-                playButton.textContent = 'Play';
-                playButton.addEventListener('click', () => {
-                    if (player.paused) {
-                        stopAllPreviews();
-                        player.play();
-                    } else {
-                        player.pause();
-                    }
-                });
-                
-                // Assemble the preview item
-                info.appendChild(urlInfo);
-                previewItem.appendChild(title);
-                previewItem.appendChild(info);
-                previewItem.appendChild(player);
-                previewItem.appendChild(playButton);
-                
-                previewsContainer.appendChild(previewItem);
+                // Force reload to trigger events
+                player.load();
             });
-            
-            playAllBtn.disabled = false;
-            stopAllBtn.disabled = false;
         }
 
-        function playAllPreviews() {
-            if (players.length === 0) return;
-            
-            isPlaying = true;
-            currentPlayerIndex = 0;
-            stopAllPreviews();
-            
-            statusEl.textContent = `Playing all previews sequentially...`;
-            statusEl.className = 'status loading';
-            
-            // Start with the first player
-            const firstPlayer = players[0];
-            
-            // Set the currentTime to 0 to ensure we start from the beginning
-            firstPlayer.currentTime = 0;
-            
-            // Only play 5 seconds of each preview
-            setTimeout(() => {
-                if (isPlaying && currentPlayerIndex === 0) {
-                    playNextPreview();
-                }
-            }, 5000);
-            
-            firstPlayer.play();
-        }
-
-        function playNextPreview() {
-            if (!isPlaying) return;
-            
-            // Stop current player
-            if (currentPlayerIndex >= 0 && currentPlayerIndex < players.length) {
-                players[currentPlayerIndex].pause();
-            }
-            
-            // Move to next player
-            currentPlayerIndex++;
-            
-            // If we've reached the end, stop playing
-            if (currentPlayerIndex >= players.length) {
-                isPlaying = false;
-                currentPlayerIndex = -1;
-                statusEl.textContent = `Finished playing all previews`;
-                statusEl.className = 'status success';
-                return;
-            }
-            
-            // Play the next preview
-            const nextPlayer = players[currentPlayerIndex];
-            nextPlayer.currentTime = 0;
-            nextPlayer.play();
-            
-            statusEl.textContent = `Playing ${currentPlayerIndex + 1} of ${players.length}: Song ID ${nextPlayer.dataset.songId}`;
-            
-            // Only play 5 seconds of each preview
-            setTimeout(() => {
-                if (isPlaying && currentPlayerIndex < players.length) {
-                    playNextPreview();
-                }
-            }, 5000);
-        }
-
-        function stopAllPreviews() {
-            isPlaying = false;
+        // Fix all source URLs to use UUIDs
+        function fixAllSources() {
+            const players = document.querySelectorAll('audio');
             players.forEach(player => {
-                player.pause();
+                const sourceElement = player.querySelector('source');
+                const debugElement = document.getElementById(`debug-${player.id.split('-')[1]}`);
+                
+                // Try to find preview URL in the page
+                const previewElement = player.closest('.audio-card').querySelector('code');
+                if (previewElement) {
+                    const previewUrl = previewElement.textContent;
+                    const uuidMatch = previewUrl.match(/\/media\/previews\/([0-9a-f-]{8}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{12})\.mp3/i);
+                    
+                    if (uuidMatch && uuidMatch[1]) {
+                        const uuid = uuidMatch[1];
+                        const timestamp = new Date().getTime();
+                        const newUrl = `/audio-serve/${uuid}.mp3?t=${timestamp}`;
+                        
+                        // Log the change
+                        debugElement.innerHTML += `Source changed:<br>From: ${sourceElement.src}<br>To: ${newUrl}<br>`;
+                        
+                        // Update source
+                        sourceElement.src = newUrl;
+                        player.load();
+                    }
+                }
             });
-            currentPlayerIndex = -1;
-            statusEl.textContent = `Playback stopped`;
-            statusEl.className = 'status';
         }
 
-        // Initialize with demo data if no API is available
-        if (window.location.protocol === 'file:') {
-            useDemoData();
+        // Reload the page
+        function reloadPage() {
+            window.location.reload();
         }
+
+        // Initialize event logging
+        document.addEventListener('DOMContentLoaded', function() {
+            logAllEvents();
+        });
     </script>
+
+    <!-- Load our updated audio-manager.js script from catalog/static/catalog/js/ -->
+    <script src="/catalog/static/catalog/js/audio-manager.js"></script>
 </body>
 </html>

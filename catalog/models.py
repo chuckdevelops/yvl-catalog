@@ -343,6 +343,22 @@ class CartiCatalog(models.Model):
         return tab and tab.name == "Unreleased"
         
     @property
+    def has_playable_link(self):
+        """Check if song has playable links from supported sources"""
+        if not self.links:
+            return False
+            
+        import re
+        # Find direct links to music.froste.lol, pillowcase.su, or krakenfiles.com which can be played
+        urls = re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', self.links)
+        for url in urls:
+            if ('music.froste.lol/song/' in url or 
+                'pillowcase.su/f/' in url or 
+                'krakenfiles.com/view/' in url):
+                return True
+        return False
+        
+    @property
     def album_track_number(self):
         """Extract the track number from notes if available"""
         # Check if we have a Young Mi$fit track number set from album_name property

@@ -88,7 +88,7 @@
         // Function to create a proxy URL with a random parameter
         function proxyUrl(filename) {
             const random = Math.floor(Math.random() * 1000000);
-            return `/static/proxy-${random}-${filename}`;
+            return `/audio-proxy/${random}/${filename}`;
         }
         
         // Function to load different versions of the files

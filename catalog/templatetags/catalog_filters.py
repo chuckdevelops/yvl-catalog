@@ -128,6 +128,8 @@ def get_domain(url):
         return 'music.froste.lol'
     elif 'pillowcase.su' in url:
         return 'pillowcase.su'
+    elif 'krakenfiles.com' in url:
+        return 'krakenfiles.com'
     elif 'soundcloud.com' in url:
         return 'SoundCloud'
     elif 'spotify.com' in url:
@@ -151,8 +153,14 @@ def get_download_url(url):
     
     # Handle pillowcase.su downloads
     elif 'pillowcase.su/f/' in url:
-        file_id = url.split('/f/')[1]
+        file_id = url.split('/f/')[1].split('/')[0] if '/' in url.split('/f/')[1] else url.split('/f/')[1]
         return f"https://pillowcase.su/f/{file_id}/download"
+    
+    # Handle krakenfiles.com downloads
+    elif 'krakenfiles.com/view/' in url:
+        # Krakenfiles doesn't have a direct download URL that can be constructed without visiting the page
+        # For now, return the original URL which will take the user to the download page
+        return url
     
     # Return None if no download URL can be constructed
     return None

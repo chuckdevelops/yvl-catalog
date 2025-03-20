@@ -106,53 +106,124 @@
                     
                     {% load catalog_filters %}
                     
-                    {% if song.preview_url %}
+                    <!-- Audio Preview Section - Shows for both songs with preview_url and those with direct music.froste.lol links -->
+                    {% if song.preview_url or song.preview_file_exists %}
                     <div class="mt-4">
-                        <h4>30-Second Preview</h4>
+                        <h4>
+                            {% if song.is_froste_link %}
+                                Full Track Preview <span class="badge bg-info">music.froste.lol</span>
+                            {% elif song.is_pillowcase_link %}
+                                Full Track Preview <span class="badge bg-warning">pillowcase.su</span>
+                            {% elif song.is_krakenfiles_link %}
+                                Full Track Preview <span class="badge bg-success">krakenfiles.com</span>
+                            {% else %}
+                                30-Second Preview
+                            {% endif %}
+                        </h4>
                         <div class="card mb-3">
                             <div class="card-body">
                                 <!-- Try multiple audio serving methods with duration constraint -->
                                 {% if song.preview_file_exists %}
                                 <div class="mb-3">
-                                    <audio id="preview-player" controls preload="auto" class="w-100">
-                                        <source src="{{ song.preview_audio_url }}" type="audio/mpeg">
+                                    <audio id="preview-player" data-player-id="preview-player" controls preload="metadata" class="w-100">
+                                        <source id="preview-source" src="{{ song.preview_audio_url }}{% if not '?' in song.preview_audio_url %}?{% else %}&{% endif %}t={{ timestamp }}" type="audio/mpeg">
                                         Your browser does not support the audio element.
                                     </audio>
+                                    <div id="preview-player-status" class="text-muted small mt-1" style="display: none;"></div>
                                 </div>
                                 
                                 <div class="row mb-3">
                                     <div class="col-12">
                                         <div class="btn-group btn-group-sm">
-                                            <button type="button" class="btn btn-outline-secondary" 
+                                            <button type="button" class="btn {% if song.is_froste_link %}btn-info{% elif song.is_pillowcase_link %}btn-warning{% elif song.is_krakenfiles_link %}btn-success{% else %}btn-outline-secondary{% endif %}" 
                                                     onclick="playWithDurationLimit('{{ song.preview_audio_url }}')">
-                                                Method 1: Custom Server
+                                                {% if song.is_froste_link %}
+                                                <i class="fas fa-play me-1"></i> Play from music.froste.lol
+                                                {% elif song.is_pillowcase_link %}
+                                                <i class="fas fa-play me-1"></i> Play from pillowcase.su
+                                                {% elif song.is_krakenfiles_link %}
+                                                <i class="fas fa-play me-1"></i> Play from krakenfiles.com
+                                                {% else %}
+                                                <i class="fas fa-play me-1"></i> Play Preview
+                                                {% endif %}
                                             </button>
+                                            
+                                            {% if song.direct_audio_url and song.direct_audio_url != song.preview_audio_url %}
                                             <button type="button" class="btn btn-outline-secondary" 
                                                     onclick="playWithDurationLimit('{{ song.direct_audio_url }}')">
-                                                Method 2: Direct URL
+                                                <i class="fas fa-music me-1"></i> Alt Method
                                             </button>
-                                            <button type="button" class="btn btn-outline-secondary" 
-                                                    onclick="playWithDurationLimit('{{ song.preview_url }}')">
-                                                Method 3: Database URL
-                                            </button>
+                                            {% endif %}
+                                            
+                                            {% if song.original_source_url %}
+                                            <a href="{{ song.original_source_url }}" target="_blank" class="btn btn-outline-primary">
+                                                <i class="fas fa-external-link-alt me-1"></i> Open Source
+                                            </a>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </div>
                                 
                                 <script>
+                                    // Generate a cache-busting timestamp
+                                    const timestamp = new Date().getTime();
+                                    
                                     document.addEventListener('DOMContentLoaded', function() {
                                         const audioPlayer = document.getElementById('preview-player');
+                                        const statusEl = document.getElementById('audio-status');
                                         
-                                        // Add error event listener to log any issues without fallback
+                                        // Ensure audio player has latest timestamp
+                                        const sourceEl = document.getElementById('preview-source');
+                                        if (sourceEl && sourceEl.src && !sourceEl.src.includes('?t=')) {
+                                            sourceEl.src = sourceEl.src + '?t=' + timestamp;
+                                        }
+                                        
+                                        // Force reload of audio element
+                                        audioPlayer.load();
+                                        
+                                        // Add metadata loading listener
+                                        audioPlayer.addEventListener('loadedmetadata', function() {
+                                            console.log('Audio metadata loaded:', this.src);
+                                            console.log('Duration:', this.duration);
+                                            statusEl.style.display = 'none';
+                                            
+                                            // If the duration is invalid (NaN or 0), try to reload
+                                            if (isNaN(this.duration) || this.duration === 0) {
+                                                console.warn('Invalid duration, attempting to reload...');
+                                                reloadAudioPlayer();
+                                            }
+                                        });
+                                        
+                                        // Add error event listener with user feedback
                                         audioPlayer.addEventListener('error', function(e) {
                                             console.error('Audio player error:', e);
                                             console.log('Error details:', this.error);
                                             console.log('Audio src:', this.src);
+                                            
+                                            statusEl.textContent = 'Error loading audio. Trying alternative method...';
+                                            statusEl.style.display = 'block';
+                                            
+                                            // Try alternative method if available
+                                            if ('{{ song.direct_audio_url }}' && '{{ song.direct_audio_url }}' !== '{{ song.preview_audio_url }}') {
+                                                setTimeout(function() {
+                                                    playWithDurationLimit('{{ song.direct_audio_url }}?t=' + new Date().getTime());
+                                                }, 1000);
+                                            }
+                                        });
+                                        
+                                        // Add stalled event listener
+                                        audioPlayer.addEventListener('stalled', function() {
+                                            console.warn('Audio playback stalled');
+                                            statusEl.textContent = 'Audio playback stalled. Reloading...';
+                                            statusEl.style.display = 'block';
+                                            reloadAudioPlayer();
                                         });
                                         
                                         // Add play event listener to log when audio starts playing
                                         audioPlayer.addEventListener('play', function() {
                                             console.log('Audio playback started:', this.src);
+                                            statusEl.style.display = 'none';
+                                            
                                             // Send a log event to the server via fetch
                                             fetch('/log-audio-play/', {
                                                 method: 'POST',
@@ -168,46 +239,236 @@
                                             }).catch(err => console.log('Logging request sent'));
                                         });
                                         
+                                        // Add waiting event listener
+                                        audioPlayer.addEventListener('waiting', function() {
+                                            console.log('Audio waiting for data...');
+                                            statusEl.textContent = 'Loading audio data...';
+                                            statusEl.style.display = 'block';
+                                        });
+                                        
                                         // Log when method buttons are clicked
                                         const methodButtons = document.querySelectorAll('.btn-group button');
                                         methodButtons.forEach(button => {
                                             button.addEventListener('click', function() {
                                                 console.log('Method button clicked:', this.textContent.trim());
-                                                console.log('URL to play:', this.getAttribute('onclick').match(/'([^']+)'/)[1]);
+                                                const url = this.getAttribute('onclick').match(/'([^']+)'/)[1];
+                                                console.log('URL to play:', url);
+                                                
+                                                // Add cache busting to URL if needed
+                                                if (url && !url.includes('?t=')) {
+                                                    playWithDurationLimit(url + '?t=' + new Date().getTime());
+                                                    // Prevent the original click handler
+                                                    return false;
+                                                }
                                             });
                                         });
+                                        
+                                        // Function to reload the audio player with a new timestamp
+                                        function reloadAudioPlayer() {
+                                            const newTimestamp = new Date().getTime();
+                                            let srcUrl = sourceEl.src.split('?')[0] + '?t=' + newTimestamp;
+                                            sourceEl.src = srcUrl;
+                                            audioPlayer.load();
+                                            console.log('Reloaded audio player with new src:', srcUrl);
+                                        }
                                     });
                                 </script>
                                 
                                 <div class="form-check mt-2">
-                                    <input class="form-check-input" type="checkbox" id="limitDuration" checked>
+                                    <input class="form-check-input" type="checkbox" id="limitDuration" 
+                                           {% if song.is_froste_link or song.is_pillowcase_link or song.is_krakenfiles_link %}{% else %}checked{% endif %}>
                                     <label class="form-check-label" for="limitDuration">
                                         Limit playback to 20 seconds (may fix playback issues)
                                     </label>
                                 </div>
                                 
                                 <script>
-                                function playWithDurationLimit(audioUrl) {
+function playWithDurationLimit(audioUrl) {
+    const audioPlayer = document.getElementById('preview-player');
+    const statusEl = document.getElementById('preview-player-status');
+    const limitDuration = document.getElementById('limitDuration').checked;
+    
+    // Always use fresh timestamp for cache-busting, regardless of existing parameters
+    const timestamp = new Date().getTime();
+    
+    // IMPORTANT ENHANCEMENT: Always prefer direct /media/previews/ URLs
+    // If we have a URL that looks like an audio-serve route, convert it to direct media URL
+    let finalUrl = "";
+    
+    // Extract and handle parameters
+    let params = new URLSearchParams();
+    params.append('t', timestamp);  // Add timestamp for cache busting
+    
+    // Case 1: Direct UUID pattern detection (preferred method)
+    const uuidPattern = /[0-9a-f-]{8}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{12}\.mp3/i;
+    const uuidMatch = audioUrl.match(uuidPattern);
+    
+    if (uuidMatch) {
+        // We found a UUID in the URL - use it directly with media/previews path
+        finalUrl = `/media/previews/${uuidMatch[0]}`;
+        console.log(`Using UUID from URL: ${finalUrl}`);
+    }
+    // Case 2: Audio-serve route with UUID
+    else if (audioUrl.includes('/audio-serve/')) {
+        // Extract the filename after audio-serve/
+        const filename = audioUrl.split('/audio-serve/')[1].split('?')[0];
+        // Use direct media URL instead (more reliable)
+        finalUrl = `/media/previews/${filename}`;
+        console.log(`Converting audio-serve to direct media URL: ${finalUrl}`);
+        
+        // Preserve source parameter if present
+        if (audioUrl.includes('?source=')) {
+            const sourceUrl = audioUrl.split('?source=')[1].split('&')[0];
+            params.append('source', sourceUrl);
+        }
+    }
+    // Case 3: Static proxy route
+    else if (audioUrl.includes('/static/proxy-')) {
+        try {
+            const fileName = audioUrl.split('/static/proxy-')[1].split('?')[0].split('-').pop();
+            finalUrl = `/media/previews/${fileName}`;
+            console.log(`Converted proxy URL to direct media: ${finalUrl}`);
+            
+            // Preserve url parameter if present
+            if (audioUrl.includes('?url=')) {
+                const sourceUrl = audioUrl.split('?url=')[1].split('&')[0];
+                params.append('url', sourceUrl);
+            }
+        } catch(e) {
+            console.error("Couldn't convert proxy URL to direct media URL:", e);
+            // Fall back to original URL
+            finalUrl = audioUrl.split('?')[0];
+        }
+    }
+    // Default: just use the base URL if no patterns match
+    else {
+        finalUrl = audioUrl.split('?')[0];
+    }
+    
+    // Build the final URL with parameters
+    const completeUrl = `${finalUrl}?${params.toString()}`;
+    console.log(`Final audio URL: ${completeUrl}`);
+    
+    // Update status
+    if (statusEl) {
+        statusEl.textContent = 'Loading audio...';
+        statusEl.style.display = 'block';
+    }
+    
+    // Remove existing timeupdate listeners
+    audioPlayer.removeEventListener('timeupdate', durationLimitHandler);
+    
+    // Set audio source
+    audioPlayer.src = completeUrl;
+    
+    // Force reload to ensure new source is used
+    audioPlayer.load();
+    
+    // Add event listener for timeupdate if limiting duration
+    if (limitDuration) {
+        audioPlayer.addEventListener('timeupdate', durationLimitHandler);
+    }
+    
+    // Reset the audio player in case it's stuck
+    audioPlayer.currentTime = 0;
+    
+    // Log all player events for debugging
+    const logPlayerEvent = (event) => {
+        console.log(`Audio event: ${event.type}`);
+    };
+    
+    // Add temporary event listeners for debugging
+    const events = ['loadstart', 'loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough', 'playing', 'waiting', 'error'];
+    events.forEach(event => {
+        audioPlayer.addEventListener(event, logPlayerEvent, { once: true });
+    });
+    
+    // Start playing after a short delay to allow metadata loading
+    setTimeout(() => {
+        audioPlayer.play()
+            .then(() => {
+                console.log('Playback started successfully');
+                if (statusEl) {
+                    statusEl.style.display = 'none';
+                }
+            })
+            .catch(e => {
+                console.error('Error playing audio:', e);
+                if (statusEl) {
+                    statusEl.textContent = 'Error starting playback. Trying alternatives...';
+                    statusEl.style.display = 'block';
+                }
+                
+                // Fallback logic:
+                // 1. If we were using direct URL, try audio-serve instead
+                // 2. If we were using audio-serve, make sure we have the right UUID format
+                // 3. Try with no cache parameter
+                
+                // We already tried direct media URL, now try audio-serve
+                if (completeUrl.includes('/media/previews/')) {
+                    // Extract the filename 
+                    const fileName = completeUrl.split('/media/previews/')[1].split('?')[0];
+                    const audioServeUrl = `/audio-serve/${fileName}?t=${new Date().getTime()}`;
+                    console.log(`Trying audio-serve fallback: ${audioServeUrl}`);
+                    
+                    setTimeout(() => {
+                        // Set directly on player to bypass our URL conversion
+                        audioPlayer.src = audioServeUrl;
+                        audioPlayer.load();
+                        audioPlayer.play().catch(e => {
+                            console.error('Audio-serve fallback also failed:', e);
+                            if (statusEl) {
+                                statusEl.textContent = 'All playback methods failed. Please reload the page.';
+                            }
+                        });
+                    }, 500);
+                }
+                // If the song has a known direct_audio_url from the server, try that
+                else if ('{{ song.direct_audio_url }}' && '{{ song.direct_audio_url }}' !== '{{ song.preview_url }}') {
+                    console.log('Trying server-provided direct URL...');
+                    const altUrl = '{{ song.direct_audio_url }}' + '?t=' + new Date().getTime();
+                    
+                    setTimeout(() => {
+                        // Direct assignment to avoid our conversion logic
+                        audioPlayer.src = altUrl;
+                        audioPlayer.load();
+                        audioPlayer.play().catch(e => {
+                            console.error('Server-provided direct URL also failed:', e);
+                            if (statusEl) {
+                                statusEl.textContent = 'All playback methods failed. Please reload the page.';
+                            }
+                        });
+                    }, 500);
+                }
+                // Last resort: try with simple standard parameters
+                else {
+                    console.log('Trying with minimal URL parameters...');
+                    const simpleUrl = finalUrl;  // No parameters
+                    
+                    setTimeout(() => {
+                        audioPlayer.src = simpleUrl;
+                        audioPlayer.load();
+                        audioPlayer.play().catch(e => {
+                            console.error('Minimal parameters approach also failed:', e);
+                            if (statusEl) {
+                                statusEl.textContent = 'All playback methods failed. Please reload the page.';
+                            }
+                        });
+                    }, 500);
+                }
+            });
+    }, 300);
+}
+                                
+                                // Duration limit handler function (defined outside to make removal easier)
+                                function durationLimitHandler() {
                                     const audioPlayer = document.getElementById('preview-player');
-                                    const limitDuration = document.getElementById('limitDuration').checked;
-                                    
-                                    // Set audio source
-                                    audioPlayer.src = audioUrl;
-                                    
-                                    // Add event listener for timeupdate
-                                    if (limitDuration) {
-                                        audioPlayer.addEventListener('timeupdate', function() {
-                                            // Stop after 20 seconds
-                                            if (audioPlayer.currentTime >= 20) {
-                                                audioPlayer.pause();
-                                                // Remove listener to prevent multiple pauses
-                                                audioPlayer.removeEventListener('timeupdate', arguments.callee);
-                                            }
-                                        });
+                                    // Stop after 20 seconds
+                                    if (audioPlayer.currentTime >= 20) {
+                                        audioPlayer.pause();
+                                        // Remove listener to prevent multiple pauses
+                                        audioPlayer.removeEventListener('timeupdate', durationLimitHandler);
                                     }
-                                    
-                                    // Start playing
-                                    audioPlayer.play().catch(e => console.error('Error playing audio:', e));
                                 }
                                 
                                 document.addEventListener('DOMContentLoaded', function() {
@@ -216,23 +477,18 @@
                                     const limitDuration = document.getElementById('limitDuration');
                                     
                                     limitDuration.addEventListener('change', function() {
+                                        // Remove existing listener first to avoid duplicates
+                                        audioPlayer.removeEventListener('timeupdate', durationLimitHandler);
+                                        
+                                        // Add new listener if checked
                                         if (this.checked) {
-                                            // Add listener when checkbox is checked
-                                            audioPlayer.addEventListener('timeupdate', function() {
-                                                if (audioPlayer.currentTime >= 20) {
-                                                    audioPlayer.pause();
-                                                }
-                                            });
+                                            audioPlayer.addEventListener('timeupdate', durationLimitHandler);
                                         }
                                     });
                                     
                                     // Initial setup
                                     if (limitDuration.checked) {
-                                        audioPlayer.addEventListener('timeupdate', function() {
-                                            if (audioPlayer.currentTime >= 20) {
-                                                audioPlayer.pause();
-                                            }
-                                        });
+                                        audioPlayer.addEventListener('timeupdate', durationLimitHandler);
                                     }
                                 });
                                 </script>
@@ -267,7 +523,7 @@
                                     
                                     <div class="d-flex">
                                         <!-- Play button -->
-                                        <a href="{{ url }}" target="_blank" class="btn {% if 'music.froste.lol' in domain %}btn-info{% elif 'pillowcase.su' in domain %}btn-warning{% elif 'SoundCloud' in domain %}btn-danger{% elif 'Spotify' in domain %}btn-success{% else %}btn-primary{% endif %} me-2">
+                                        <a href="{{ url }}" target="_blank" class="btn {% if 'music.froste.lol' in domain %}btn-info{% elif 'pillowcase.su' in domain %}btn-warning{% elif 'krakenfiles.com' in domain %}btn-success{% elif 'SoundCloud' in domain %}btn-danger{% elif 'Spotify' in domain %}btn-success{% else %}btn-primary{% endif %} me-2">
                                             <i class="fas fa-play me-1"></i> Play
                                         </a>
                                         

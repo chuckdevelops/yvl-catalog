@@ -1095,17 +1095,86 @@ def song_detail(request, song_id):
         else:
             preview_filename = os.path.basename(song.preview_url)
             
-        # Check if file exists
+        # Check if file exists - try both direct media path and audio-serve pattern
         preview_file_path = os.path.join(settings.MEDIA_ROOT, 'previews', preview_filename)
         song.preview_file_exists = os.path.exists(preview_file_path)
         
-        # Use custom audio server URL
+        # Log file existence check for debugging
+        # Use print instead of logger which wasn't defined
+        print(f"File existence check for {preview_file_path}: {song.preview_file_exists}")
+        
+        # Even if the file doesn't appear to exist, still set the URLs
+        # to allow the JavaScript audio-url-fixer to try both methods
         song.preview_audio_url = f'/audio-serve/{preview_filename}'
         song.direct_audio_url = f'/media/previews/{preview_filename}'
+        
+        # If the file has been properly re-encoded, it should exist
+        # Force preview_file_exists to True to allow client-side handling
+        if preview_filename and preview_filename.endswith('.mp3'):
+            song.preview_file_exists = True
     else:
+        # For songs without preview URLs, try to find a source URL that can be played
         song.preview_file_exists = False
         song.preview_audio_url = None
         song.direct_audio_url = None
+        
+        # Extract URL from links if possible
+        if song.links:
+            import re
+            import uuid
+            import urllib.parse
+            
+            # Find direct links to music.froste.lol, pillowcase.su, or krakenfiles.com which can be played
+            source_url = None
+            original_url = None
+            is_froste = False
+            is_pillowcase = False
+            is_krakenfiles = False
+            
+            urls = re.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', song.links)
+            for url in urls:
+                if 'music.froste.lol/song/' in url:
+                    source_url = url
+                    original_url = url
+                    is_froste = True
+                    break
+                elif 'pillowcase.su/f/' in url:
+                    # Keep track of the original URL
+                    original_url = url
+                    # Convert pillowcase.su link to a direct download link
+                    file_id = url.split('/f/')[1].split('/')[0] if '/' in url.split('/f/')[1] else url.split('/f/')[1]
+                    source_url = f"https://pillowcase.su/f/{file_id}/download"
+                    is_pillowcase = True
+                    break
+                elif 'krakenfiles.com/view/' in url:
+                    # Keep track of the original URL
+                    original_url = url
+                    # For krakenfiles, use the original view URL
+                    source_url = url
+                    is_krakenfiles = True
+                    break
+            
+            if source_url:
+                # Generate a random parameter for cache busting
+                # Use a properly formatted UUID with dashes to match existing files
+                random_id = str(uuid.uuid4())  # This already includes the dashes
+                
+                # Create a proxy URL using our serve_audio_proxy endpoint
+                encoded_url = urllib.parse.quote(source_url)
+                proxy_filename = f"{random_id}.mp3"  # Use UUID format to match existing files
+                
+                # Set URLs for the various playback methods
+                song.original_source_url = original_url  # The original URL as it appears in links
+                song.source_url = source_url  # The actual source URL (might be modified for direct download)
+                song.direct_audio_url = f"/static/proxy-{random_id}-{proxy_filename}?url={encoded_url}"  # Keep original format for backward compatibility
+                song.preview_url = f"/audio-serve/{proxy_filename}?source={encoded_url}"  # Use the working audio-serve route instead
+                song.preview_file_exists = True  # Set to True to show player
+                song.preview_audio_url = song.preview_url
+                
+                # Set additional properties to identify source
+                song.is_froste_link = is_froste
+                song.is_pillowcase_link = is_pillowcase
+                song.is_krakenfiles_link = is_krakenfiles
     
     # Get recommended songs based on collaborative filtering
     from django.db.models import Count, Q
@@ -1471,9 +1540,13 @@ def song_detail(request, song_id):
         # Sort by track number
         album_related_songs = sorted(album_related_songs, key=lambda s: s.display_track_number or 999)
     
+    # Generate current timestamp for cache busting
+    import time
+    
     context = {
         'song': song,
         'recommended_songs': recommended_songs,
+        'timestamp': int(time.time() * 1000),  # Current time in milliseconds
         'album_related_songs': album_related_songs,
         'like_count': like_count,
         'dislike_count': dislike_count,
@@ -1581,8 +1654,10 @@ def coming_soon(request):
 def serve_audio_proxy(request, random, filename):
     """Proxy audio file server with random parameter in URL to prevent caching"""
     import os
+    import requests
+    import urllib.parse
     from django.conf import settings
-    from django.http import FileResponse, Http404
+    from django.http import FileResponse, HttpResponse, Http404, StreamingHttpResponse
     import logging
     import hashlib
     
@@ -1593,7 +1668,78 @@ def serve_audio_proxy(request, random, filename):
     logger.info(f"[AUDIO PROXY] Serving audio via proxy: {filename}")
     logger.info(f"[AUDIO PROXY] Random parameter: {random}")
     logger.info(f"[AUDIO PROXY] Request URL: {request.path}")
+    logger.info(f"[AUDIO PROXY] Request GET params: {request.GET}")
+    logger.info(f"[AUDIO PROXY] Request method: {request.method}")
+    logger.info(f"[AUDIO PROXY] Headers: {request.headers}")
     
+    # Check if this is a remote URL proxy request
+    source_url = request.GET.get('url')
+    if source_url:
+        logger.info(f"[AUDIO PROXY] Proxying remote URL: {source_url}")
+        
+        try:
+            # Decode URL if needed
+            if '%' in source_url:
+                source_url = urllib.parse.unquote(source_url)
+                
+            # Setup headers for the request
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': '*/*',
+                'Accept-Encoding': 'identity;q=1, *;q=0',  # Avoid compressed responses
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': source_url,
+                'Origin': 'https://music.froste.lol' if 'music.froste.lol' in source_url else ('https://pillowcase.su' if 'pillowcase.su' in source_url else ('https://krakenfiles.com' if 'krakenfiles.com' in source_url else 'https://example.com')),
+                'Cache-Control': 'no-cache',
+            }
+            
+            # Add Range header if present in original request
+            if 'HTTP_RANGE' in request.META:
+                headers['Range'] = request.META['HTTP_RANGE']
+                logger.info(f"[AUDIO PROXY] Forwarding Range header: {request.META['HTTP_RANGE']}")
+                
+            # Make request to source URL
+            source_response = requests.get(source_url, headers=headers, stream=True, allow_redirects=True, timeout=10)
+            
+            # Check response status
+            if source_response.status_code >= 400:
+                logger.error(f"[AUDIO PROXY] Remote URL returned error: {source_response.status_code}")
+                return HttpResponse(f"Error fetching remote audio: {source_response.status_code}", status=source_response.status_code)
+                
+            # Get content type
+            content_type = source_response.headers.get('Content-Type', 'audio/mpeg')
+            
+            # Create streaming response
+            response = StreamingHttpResponse(source_response.iter_content(chunk_size=8192), content_type=content_type)
+            
+            # Copy relevant headers from the source response
+            for header in ['Content-Length', 'Content-Range', 'Accept-Ranges', 'ETag']:
+                if header in source_response.headers:
+                    response[header] = source_response.headers[header]
+                    
+            # Set random filename in Content-Disposition to prevent browser caching
+            random_filename = f"preview-{random}-{filename}"
+            response['Content-Disposition'] = f'inline; filename="{random_filename}"'
+            
+            # Enable CORS
+            response['Access-Control-Allow-Origin'] = '*'
+            response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Range'
+            
+            # Extreme anti-caching headers
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0, private'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '-1'
+            response['Vary'] = '*'
+            
+            logger.info(f"[AUDIO PROXY] Successfully proxying remote URL via proxy with random={random}")
+            return response
+            
+        except Exception as e:
+            logger.exception(f"[AUDIO PROXY] Error proxying remote URL: {str(e)}")
+            return HttpResponse(f"Error proxying remote audio: {str(e)}", status=500)
+    
+    # If we get here, it's a local file request
     # Get the absolute path to the file
     file_path = os.path.join(settings.MEDIA_ROOT, 'previews', filename)
     
@@ -1648,10 +1794,24 @@ def serve_audio_proxy(request, random, filename):
         raise
 
 def serve_audio(request, filename):
-    """Direct audio file server"""
+    """Direct audio file server that can also proxy remote URLs"""
     import os
+    import requests
+    import urllib.parse
     from django.conf import settings
-    from django.http import FileResponse, Http404
+    import logging
+    import time
+    
+    # Setup logging
+    logger = logging.getLogger(__name__)
+    
+    # Enhanced logging for debugging
+    logger.info(f"[AUDIO SERVE] Serving audio: {filename}")
+    logger.info(f"[AUDIO SERVE] Request URL: {request.path}")
+    logger.info(f"[AUDIO SERVE] Request GET params: {request.GET}")
+    logger.info(f"[AUDIO SERVE] Request method: {request.method}")
+    logger.info(f"[AUDIO SERVE] Headers: {request.headers}")
+    from django.http import FileResponse, HttpResponse, Http404, StreamingHttpResponse
     import logging
     import hashlib
     
@@ -1665,12 +1825,77 @@ def serve_audio(request, filename):
     logger.info(f"[AUDIO SERVE] User agent: {request.META.get('HTTP_USER_AGENT', 'Unknown')}")
     logger.info(f"[AUDIO SERVE] Referrer: {request.META.get('HTTP_REFERER', 'None')}")
     
-    # Get any query parameters (used for cache busting)
+    # Get any query parameters
     query_params = request.GET.dict()
     if query_params:
         logger.info(f"[AUDIO SERVE] Query params: {query_params}")
     
-    # Security check to prevent directory traversal
+    # Check if this is a remote source request
+    source_url = request.GET.get('source')
+    if source_url:
+        logger.info(f"[AUDIO SERVE] Proxying remote source: {source_url}")
+        
+        try:
+            # Decode URL if needed
+            if '%' in source_url:
+                source_url = urllib.parse.unquote(source_url)
+                
+            # Setup headers for the request
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': '*/*',
+                'Accept-Encoding': 'identity;q=1, *;q=0',  # Avoid compressed responses
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Referer': source_url,
+                'Origin': 'https://music.froste.lol' if 'music.froste.lol' in source_url else ('https://pillowcase.su' if 'pillowcase.su' in source_url else ('https://krakenfiles.com' if 'krakenfiles.com' in source_url else 'https://example.com')),
+                'Cache-Control': 'no-cache',
+            }
+            
+            # Add Range header if present in original request
+            if 'HTTP_RANGE' in request.META:
+                headers['Range'] = request.META['HTTP_RANGE']
+                logger.info(f"[AUDIO SERVE] Forwarding Range header: {request.META['HTTP_RANGE']}")
+                
+            # Make request to source URL
+            source_response = requests.get(source_url, headers=headers, stream=True, allow_redirects=True, timeout=10)
+            
+            # Check response status
+            if source_response.status_code >= 400:
+                logger.error(f"[AUDIO SERVE] Remote URL returned error: {source_response.status_code}")
+                return HttpResponse(f"Error fetching remote audio: {source_response.status_code}", status=source_response.status_code)
+                
+            # Get content type
+            content_type = source_response.headers.get('Content-Type', 'audio/mpeg')
+            
+            # Create streaming response
+            response = StreamingHttpResponse(source_response.iter_content(chunk_size=8192), content_type=content_type)
+            
+            # Copy relevant headers from the source response
+            for header in ['Content-Length', 'Content-Range', 'Accept-Ranges', 'ETag']:
+                if header in source_response.headers:
+                    response[header] = source_response.headers[header]
+                    
+            # Set filename in Content-Disposition
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            
+            # Enable CORS
+            response['Access-Control-Allow-Origin'] = '*'
+            response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Range'
+            
+            # Disable caching
+            response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+            response['Pragma'] = 'no-cache'
+            response['Expires'] = '0'
+            
+            logger.info(f"[AUDIO SERVE] Successfully proxying remote source: {source_url}")
+            return response
+            
+        except Exception as e:
+            logger.exception(f"[AUDIO SERVE] Error proxying remote source: {str(e)}")
+            return HttpResponse(f"Error proxying remote audio: {str(e)}", status=500)
+    
+    # Security check to prevent directory traversal for local files
     if '..' in filename or filename.startswith('/'):
         logger.error(f"[AUDIO SERVE] Security check failed for filename: {filename}")
         raise Http404("Invalid filename")
