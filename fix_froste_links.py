@@ -335,7 +335,7 @@ def create_standardized_preview(input_file, output_file):
         
         # Default parameters
         start_time = 0
-        duration = 19  # Target 19 seconds to match working files
+        duration = 30  # Target 30 seconds for previews
         
         # If we can get the duration, calculate a good starting point
         if result.returncode == 0:
@@ -343,10 +343,10 @@ def create_standardized_preview(input_file, output_file):
             logger.info(f"Source file duration: {file_duration} seconds")
             
             # Choose start point based on file length
-            if file_duration > 60:
+            if file_duration > 90:
                 # For longer tracks, skip intro and start at 10% of duration
                 start_time = min(file_duration * 0.1, 30)
-            elif file_duration > 30:
+            elif file_duration > 45:
                 # For medium tracks, start a bit in
                 start_time = 5
             
@@ -363,7 +363,6 @@ def create_standardized_preview(input_file, output_file):
             '-ar', '48000',  # 48kHz sample rate
             '-ac', '2',      # Stereo
             '-b:a', '128k',  # 128kbps bitrate
-            '-af', 'afade=t=in:st=0:d=0.5,afade=t=out:st=18.5:d=0.5',  # Add fade in/out
             output_file
         ]
         

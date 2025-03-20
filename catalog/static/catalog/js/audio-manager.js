@@ -1,6 +1,7 @@
 /**
  * Audio Player Manager
  * Centralizes audio player functionality and handles pagination
+ * Now with PHYSICS!
  */
 class AudioPlayerManager {
     constructor() {
@@ -8,6 +9,8 @@ class AudioPlayerManager {
         this.activePlayer = null;
         this.maxPlayers = 3; // Maximum number of simultaneously initialized players
         this.initialized = false;
+        this.physicsEnabled = false;
+        this.physicsObjects = [];
     }
 
     /**
@@ -585,15 +588,11 @@ class AudioPlayerManager {
     }
     
     /**
-     * Duration limit handler function
+     * Duration limit handler function - removed 20-second limitation
      */
     durationLimitHandler() {
-        // Stop after 20 seconds
-        if (this.currentTime >= 20) {
-            this.pause();
-            // Remove listener to prevent multiple pauses
-            this.removeEventListener('timeupdate', AudioManager.durationLimitHandler);
-        }
+        // No duration limit - allow full playback
+        return;
     }
 }
 
@@ -605,10 +604,8 @@ document.addEventListener('DOMContentLoaded', () => {
     AudioManager.init();
 });
 
-// Duration limit handler (static method to allow removal)
+// Duration limit handler (static method to allow removal) - removed 20-second limitation
 AudioPlayerManager.prototype.durationLimitHandler = function() {
-    if (this.currentTime >= 20) {
-        this.pause();
-        this.removeEventListener('timeupdate', AudioPlayerManager.prototype.durationLimitHandler);
-    }
+    // No duration limit - allow full playback
+    return;
 };
