@@ -47,6 +47,9 @@ urlpatterns = [
     # Direct audio serving (custom handler for each file)
     path('audio-serve/<str:filename>', views.serve_audio, name='serve_audio'),
     
+    # Krakenfiles-specific proxy endpoint for handling krakenfiles.com links
+    path('krakenfiles-proxy/', views.serve_krakenfiles_proxy, name='krakenfiles_proxy'),
+    
     # Full audio testing page
     path('audio-test/', views.audio_test_view, name='audio_test'),
     

@@ -1,0 +1,442 @@
+{
+  "timestamp": "20250321_051450",
+  "total_krakenfiles_songs": 90,
+  "successful_count": 42,
+  "failed_count": 48,
+  "failed_songs": [
+    {
+      "id": 424,
+      "name": "Squad [V1] (prod. Chinatown) (I'M WIT' THE SQUAD, FIREARM)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/OnSMN8i16n/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/OnSMN8i16n/file.html"
+      ]
+    },
+    {
+      "id": 8495,
+      "name": "YUNGXANHOE [Music Video]",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/V9XVP5o2wz/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/V9XVP5o2wz/file.html"
+      ]
+    },
+    {
+      "id": 11307,
+      "name": "\u2b50\ufe0f Die Lit",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/Ow9rcWM2ux/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/Ow9rcWM2ux/file.html"
+      ]
+    },
+    {
+      "id": 68197,
+      "name": "Ye - Junya [Stems] (feat. Playboi Carti) (prod. Ojivolta, Digital Nas & Roark Bailey)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/HPh36Jgnms/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/HPh36Jgnms/file.html"
+      ]
+    },
+    {
+      "id": 68198,
+      "name": "Ye - Junya pt 2 [Stems] (feat. Playboi Carti & Ty Dolla $ign) (prod. Ojivolta, Digital Nas & Roark Bailey)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/oxkErd23Au/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/oxkErd23Au/file.html"
+      ]
+    },
+    {
+      "id": 68201,
+      "name": "Ye - Made It [88-Keys Version) (feat. Playboi Carti) (prod. OjiVolta & 88-Keys)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/BKfHj6ZN69/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/BKfHj6ZN69/file.html"
+      ]
+    },
+    {
+      "id": 68200,
+      "name": "Ye - Off The Grid [Stems] (feat. Playboi Carti & Fivio Foreign) (prod. 30 Roc, Ojivolta, AyoAA, Sloane & David & Eli)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/7qt3NaEFYb/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/7qt3NaEFYb/file.html"
+      ]
+    },
+    {
+      "id": 8577,
+      "name": "BACKDOOR [Music Video] (prod. Ye)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/a45RcyRtTl/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/a45RcyRtTl/file.html"
+      ]
+    },
+    {
+      "id": 8579,
+      "name": "COBRA* [Music Video]",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/AY5HCwE6X2/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/AY5HCwE6X2/file.html"
+      ]
+    },
+    {
+      "id": 8578,
+      "name": "Dear O [Documentary] (dir. Joy Divizn)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/anXgzEDBR1/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/anXgzEDBR1/file.html"
+      ]
+    },
+    {
+      "id": 8585,
+      "name": "KETAMINE [Music Video]",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/hAfetvP4m8/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/hAfetvP4m8/file.html"
+      ]
+    },
+    {
+      "id": 68215,
+      "name": "The Weeknd & Madonna - Popular [Stems] (with Playboi Carti) (prod. Metro Boomin, MIKE DEAN, The Weeknd, & Tommy Rush)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/Pg7UbUXLfM/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/Pg7UbUXLfM/file.html"
+      ]
+    },
+    {
+      "id": 3861,
+      "name": "\ud83c\udfc6 ??? [Music Video] (Chainsaw MV)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/4gGDJ7qlTI/file.html https://krakenfiles.com/view/VVzf8uB22U/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/VVzf8uB22U/file.html",
+        "https://krakenfiles.com/view/4gGDJ7qlTI/file.html"
+      ]
+    },
+    {
+      "id": 4434,
+      "name": "\ud83e\udd47 DOTHEMOST* [Music Video]",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/oAdOIe8xAS/file.html https://krakenfiles.com/view/RZudsp5pnF/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/RZudsp5pnF/file.html",
+        "https://krakenfiles.com/view/oAdOIe8xAS/file.html"
+      ]
+    },
+    {
+      "id": 68232,
+      "name": "The Weeknd - Timeless [Dolby Atmos Stems] (feat. Playboi Carti) (prod. Pharrell Williams, Ojivolta, Twisco & Mike Dean)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/C859tF9yem/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/C859tF9yem/file.html"
+      ]
+    },
+    {
+      "id": 1840,
+      "name": "Tyler, The Creator - Thought I Was Dead [First Pressing Version] (feat. Playboi Carti) (prod. Tyler, The Creator)",
+      "preview_url": null,
+      "links": "https://www.google.com/url?q=https://krakenfiles.com/view/gX36nBNOuM/file.html&sa=D&source=editors&ust=1741822619729956&usg=AOvVaw33426vM8uEbs8Ire-dk-ZH",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/gX36nBNOuM/file.html&sa=D&source=editors&ust=1741822619729956&usg=AOvVaw33426vM8uEbs8Ire-dk-ZH"
+      ]
+    },
+    {
+      "id": 4437,
+      "name": "\ud83e\udd47 CRUSH [Music Video] (feat. Travis Scott & DJ Swamp Izzo) (prod. F1LTHY)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/PA4eh4GgAT/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/PA4eh4GgAT/file.html"
+      ]
+    },
+    {
+      "id": 4438,
+      "name": "\ud83e\udd47 LOVE GOT ME NUMB [Music Video] (feat. DJ Swamp Izzo & Sunday Service Choir) (prod. Ssor.t, Kp Beatz, and OjiVolta) (OMERTA)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/tJOzdEmybM/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/tJOzdEmybM/file.html"
+      ]
+    },
+    {
+      "id": 8569,
+      "name": "Givenchy New Collection trailer",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/uLZMPUHkHj/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/uLZMPUHkHj/file.html"
+      ]
+    },
+    {
+      "id": 68206,
+      "name": "Made It This Far [Beat Stems] (prod. Digital Nas)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/GHa49NpCzS/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/GHa49NpCzS/file.html"
+      ]
+    },
+    {
+      "id": 68207,
+      "name": "New Tank (Tour Version) [Stems] (prod. F1LTHY & Jonah Abraham)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/Dmjp5NfGK1/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/Dmjp5NfGK1/file.html"
+      ]
+    },
+    {
+      "id": 8571,
+      "name": "Sedition Magazine",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/7eoZSIhwcq/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/7eoZSIhwcq/file.html"
+      ]
+    },
+    {
+      "id": 394,
+      "name": "All Of Them [V2] (feat. Skippa Da Flippa) (prod. Lil Kaydee)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/H6T9EyFJ91/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/H6T9EyFJ91/file.html"
+      ]
+    },
+    {
+      "id": 373,
+      "name": "???",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/P8O3kv6aiY/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/P8O3kv6aiY/file.html"
+      ]
+    },
+    {
+      "id": 8511,
+      "name": "In My Car [Music Video]",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/28Lo3XAgFT/file.html https://youtu.be/LUrsuJ6UT3E",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/28Lo3XAgFT/file.html"
+      ]
+    },
+    {
+      "id": 68095,
+      "name": "Kelly K [Stems]",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/hIXCUaNA2g/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/hIXCUaNA2g/file.html"
+      ]
+    },
+    {
+      "id": 319,
+      "name": "New Choppa [V1] (feat. A$AP Rocky) (prod. Ricci Riera)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/VAlAbSb5g2/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/VAlAbSb5g2/file.html"
+      ]
+    },
+    {
+      "id": 68101,
+      "name": "One Day [Session] (prod. Pi'erre Bourne)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/JhhU5oRyrm/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/JhhU5oRyrm/file.html"
+      ]
+    },
+    {
+      "id": 335,
+      "name": "Soulja Boy - ??? (feat. Playboi Carti) (prod. DP Beats) (Stupid)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/ZkWtYCzswU/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/ZkWtYCzswU/file.html"
+      ]
+    },
+    {
+      "id": 334,
+      "name": "Swoosh God - ??? (feat. Playboi Carti) (Run It Up)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/qJsYWuTEIc/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/qJsYWuTEIc/file.html"
+      ]
+    },
+    {
+      "id": 11306,
+      "name": "\u2b50\ufe0f Playboi Carti",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/ryOAoamKxB/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/ryOAoamKxB/file.html"
+      ]
+    },
+    {
+      "id": 11308,
+      "name": "\u2b50\ufe0f Whole Lotta Red",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/mSQ3Kl5dh3/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/mSQ3Kl5dh3/file.html"
+      ]
+    },
+    {
+      "id": 8541,
+      "name": "Playboi Carti at Icebox",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/jZH4f6sfbF/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/jZH4f6sfbF/file.html"
+      ]
+    },
+    {
+      "id": 68166,
+      "name": "Yung Bans - High As Us [Sessions] (feat. Playboi Carti) (prod. Bugz Ronin)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/uj1GDvvJPe/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/uj1GDvvJPe/file.html"
+      ]
+    },
+    {
+      "id": 5053,
+      "name": "\u2b50 Cartier [Music Video] (feat. Lil Uzi Vert) (dir. Art Dealer)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/pZnjQCI5aU/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/pZnjQCI5aU/file.html"
+      ]
+    },
+    {
+      "id": 8545,
+      "name": "Givenchy Ad",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/IZao8QBX7Z/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/IZao8QBX7Z/file.html"
+      ]
+    },
+    {
+      "id": 5635,
+      "name": "\u2728 Sky [Music Video] [V1] (dir. Nick Walker)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/8rx0wSiSw6/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/8rx0wSiSw6/file.html"
+      ]
+    },
+    {
+      "id": 68169,
+      "name": "Can't Fake It [Session]",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/rYdyufGms4/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/rYdyufGms4/file.html"
+      ]
+    },
+    {
+      "id": 68177,
+      "name": "Going Outta Style [Session] (Medusa, Rager)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/7V55foTjs8/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/7V55foTjs8/file.html"
+      ]
+    },
+    {
+      "id": 68179,
+      "name": "Money [Session]",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/X1sRSJiWKH/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/X1sRSJiWKH/file.html"
+      ]
+    },
+    {
+      "id": 68180,
+      "name": "Never Seen Shit [Session]",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/5IxpXmh3PS/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/5IxpXmh3PS/file.html"
+      ]
+    },
+    {
+      "id": 68187,
+      "name": "Popular [Session]",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/jqbVcUug1B/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/jqbVcUug1B/file.html"
+      ]
+    },
+    {
+      "id": 68189,
+      "name": "Pour Me Up [Session] (prod. DHill)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/enJQoyLAcI/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/enJQoyLAcI/file.html"
+      ]
+    },
+    {
+      "id": 68190,
+      "name": "Ridin' [Session] (prod. KP Beatz & Fluxury)",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/lXpgxdTBJR/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/lXpgxdTBJR/file.html"
+      ]
+    },
+    {
+      "id": 68191,
+      "name": "Rockstar Shit [Session]",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/Q6kYVLfQ6q/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/Q6kYVLfQ6q/file.html"
+      ]
+    },
+    {
+      "id": 68195,
+      "name": "Too Many Bags [Session]",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/tZ2kqC4wad/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/tZ2kqC4wad/file.html"
+      ]
+    },
+    {
+      "id": 8478,
+      "name": "TFZ THE INFECTION [Mini Documentary]",
+      "preview_url": null,
+      "links": "https://krakenfiles.com/view/3LpE1ijXKB/file.html",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/3LpE1ijXKB/file.html"
+      ]
+    },
+    {
+      "id": 1563,
+      "name": "\u2b50 Steeze [V2] (prod. TDeeZy)",
+      "preview_url": null,
+      "links": "https://www.google.com/url?q=https://krakenfiles.com/view/LgMmPD3NaH/file.html&sa=D&source=editors&ust=1741822619654063&usg=AOvVaw2SURmgJyE_MT2qcRp4rP74",
+      "krakenfiles_urls": [
+        "https://krakenfiles.com/view/LgMmPD3NaH/file.html&sa=D&source=editors&ust=1741822619654063&usg=AOvVaw2SURmgJyE_MT2qcRp4rP74"
+      ]
+    }
+  ]
+}

@@ -3,7 +3,7 @@
 Script to fix all krakenfiles.com preview issues by:
 1. Creating a backup of all current preview files
 2. Identifying all songs with krakenfiles.com links in the database
-3. Downloading audio content directly from krakenfiles.com using browser automation
+3. Downloading audio content directly from krakenfiles.com using requests
 4. Re-encoding with standardized parameters (128kbps, 48kHz, 30-second duration)
 5. Updating the database with new preview URLs
 
@@ -14,13 +14,9 @@ Usage:
   python fix_krakenfiles_links.py [--debug] [--limit=N] [--song-id=ID]
 
 Requirements:
-  - selenium
-  - webdriver-manager
   - ffmpeg
-  - curl
-
-Install with:
-  pip install selenium webdriver-manager
+  - requests
+  - beautifulsoup4
 """
 
 import os
@@ -33,6 +29,8 @@ import logging
 import time
 import argparse
 import hashlib
+import requests
+from bs4 import BeautifulSoup
 from datetime import datetime
 from pathlib import Path
 
@@ -46,19 +44,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-
-# Check for required Python packages
-try:
-    from selenium import webdriver
-    from selenium.webdriver.chrome.service import Service
-    from selenium.webdriver.chrome.options import Options
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    from webdriver_manager.chrome import ChromeDriverManager
-except ImportError:
-    logger.error("Required packages not installed. Run: pip install selenium webdriver-manager")
-    sys.exit(1)
 
 # Set up Django environment
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -146,283 +131,159 @@ def extract_krakenfiles_urls(links_text):
     
     return all_urls
 
-def download_from_krakenfiles_browser(url):
-    """Download a file from krakenfiles.com using browser automation"""
+def download_from_krakenfiles(url):
+    """Download a file from krakenfiles.com using requests and BeautifulSoup"""
     logger.info(f"Attempting to download from krakenfiles URL: {url}")
     
-    # Set up headless browser
-    options = Options()
-    options.add_argument("--headless")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+    # Create a session to persist cookies and headers
+    session = requests.Session()
     
-    driver = None
+    # Set realistic browser headers
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://krakenfiles.com/',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Fetch-User': '?1',
+        'DNT': '1',
+    }
+    
     try:
-        # Initialize the browser
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        # Visit the page to get cookies and HTML content
+        response = session.get(url, headers=headers, timeout=15)
+        response.raise_for_status()
         
-        # Visit the page
-        driver.get(url)
-        logger.info(f"Loaded URL: {url}")
+        # Parse the HTML
+        soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Wait for page to load fully
-        time.sleep(5)  # Allow JavaScript to execute
-        wait = WebDriverWait(driver, 20)
-        
-        download_url = None
-        
-        # Step 1: Look for <audio> tag with id "jp_audio_0"
-        try:
-            logger.info("Looking for audio element with id 'jp_audio_0'")
-            audio_element = driver.find_element(By.ID, "jp_audio_0")
-            download_url = audio_element.get_attribute("src")
-            if download_url:
-                logger.info(f"Found direct audio URL in jp_audio_0: {download_url}")
-                return download_url
-        except Exception as e:
-            logger.warning(f"Could not find jp_audio_0 element: {str(e)}")
-        
-        # Step 2: Look for JavaScript variables with .m4a URLs
-        logger.info("Looking for .m4a URLs in JavaScript variables")
-        m4a_js_check = """
-        // Search for m4a URLs in all script tags and global variables
-        function findM4aUrls() {
-            const m4aUrls = [];
+        # Method 1: Try to find direct audio URL in the jPlayer setMedia JavaScript code
+        jplayer_pattern = re.search(r'm4a:\s*[\'"](?:https?:)?//([^\'"\s]+)[\'"]', response.text)
+        if jplayer_pattern:
+            # Extract the relative URL and make it absolute
+            audio_relative_url = jplayer_pattern.group(1)
+            audio_url = f"https://{audio_relative_url}"
+            logger.info(f"Found direct audio URL in jPlayer code: {audio_url}")
             
-            // Check window variables
-            for (let prop in window) {
-                try {
-                    if (typeof window[prop] === 'string' && 
-                        window[prop].includes('.m4a') && 
-                        window[prop].startsWith('http')) {
-                        m4aUrls.push(window[prop]);
-                    }
-                } catch (e) { /* ignore errors */ }
-            }
-            
-            // Check script content
-            const scripts = document.querySelectorAll('script');
-            for (const script of scripts) {
-                if (!script.textContent) continue;
-                
-                const content = script.textContent;
-                const matches = content.match(/['"]https?:\/\/[^'"]+\.m4a['"]/g);
-                if (matches) {
-                    matches.forEach(match => {
-                        m4aUrls.push(match.replace(/['"]/g, ''));
-                    });
-                }
-            }
-            
-            return m4aUrls;
-        }
-        
-        return findM4aUrls();
-        """
-        
-        try:
-            m4a_urls = driver.execute_script(m4a_js_check)
-            if m4a_urls and len(m4a_urls) > 0:
-                download_url = m4a_urls[0]
-                logger.info(f"Found .m4a URL in JavaScript: {download_url}")
-                return download_url
-        except Exception as e:
-            logger.warning(f"Error executing JavaScript to find m4a URLs: {str(e)}")
-        
-        # Step 3: Look for download button elements
-        logger.info("Looking for download button elements")
-        download_button_selectors = [
-            "div.download-now-text",
-            "a.download-button",
-            "a[href*='download']",
-            "button.download-button",
-            "div.dl-btn",
-            "a.dl-btn"
-        ]
-        
-        download_button = None
-        for selector in download_button_selectors:
-            try:
-                elements = driver.find_elements(By.CSS_SELECTOR, selector)
-                if elements:
-                    download_button = elements[0]
-                    logger.info(f"Found download button with selector: {selector}")
-                    break
-            except Exception as e:
-                pass
-        
-        if download_button:
-            # Check parent <a> tag for href
-            try:
-                parent_a = download_button.find_element(By.XPATH, "./ancestor::a[1]")
-                href = parent_a.get_attribute("href")
-                if href and (href.startswith("http") and 
-                           (href.endswith(".mp3") or 
-                            href.endswith(".m4a") or 
-                            "download" in href)):
-                    download_url = href
-                    logger.info(f"Found download URL in parent a tag: {download_url}")
-                    return download_url
-            except Exception as e:
-                logger.warning(f"No valid parent a tag found: {str(e)}")
-            
-            # If download URL not found, analyze JavaScript for download links
-            logger.info("Looking for JavaScript download functions")
-            js_analysis = """
-            function analyzeForDownloadUrl() {
-                // Look for onclick handlers that contain download URLs
-                const clickElements = document.querySelectorAll('[onclick]');
-                for (const el of clickElements) {
-                    const onclick = el.getAttribute('onclick');
-                    if (onclick && onclick.includes('download')) {
-                        // Extract URL if present in onclick
-                        const matches = onclick.match(/['"]https?:\/\/[^'"]+['"]/);
-                        if (matches) return matches[0].replace(/['"]/g, '');
-                    }
-                }
-                
-                // Look for data attributes that might contain download URLs
-                const dataElements = document.querySelectorAll('[data-url], [data-href], [data-download]');
-                for (const el of dataElements) {
-                    if (el.dataset.url) return el.dataset.url;
-                    if (el.dataset.href) return el.dataset.href;
-                    if (el.dataset.download) return el.dataset.download;
-                }
-                
-                // Look for any URL in window variables
-                for (let prop in window) {
-                    try {
-                        if (typeof window[prop] === 'string' && 
-                            window[prop].startsWith('http') && 
-                            (window[prop].includes('/download/') || 
-                             window[prop].endsWith('.mp3') || 
-                             window[prop].endsWith('.m4a'))) {
-                            return window[prop];
-                        }
-                    } catch (e) { /* ignore errors */ }
-                }
-                
-                return null;
-            }
-            
-            return analyzeForDownloadUrl();
-            """
+            # Download the audio file
+            output_path = os.path.join(DOWNLOAD_DIR, f"download_{uuid.uuid4()}.mp3")
+            audio_headers = headers.copy()
+            audio_headers['Referer'] = url  # Important: set the referrer to the original page
             
             try:
-                js_url = driver.execute_script(js_analysis)
-                if js_url:
-                    download_url = js_url
-                    logger.info(f"Found download URL from JavaScript analysis: {download_url}")
-                    return download_url
-            except Exception as e:
-                logger.warning(f"Error in JavaScript analysis: {str(e)}")
-            
-            # Last resort: Attempt to click the button and monitor network requests
-            logger.info("Attempting to click download button and monitor network")
-            try:
-                # Set up interceptor before clicking
-                driver.execute_script("""
-                    window.downloadUrls = [];
-                    const originalOpen = XMLHttpRequest.prototype.open;
-                    XMLHttpRequest.prototype.open = function(method, url) {
-                        if (url.includes('.mp3') || url.includes('.m4a') || 
-                            url.includes('/download/') || url.includes('/stream/')) {
-                            window.downloadUrls.push(url);
-                        }
-                        return originalOpen.apply(this, arguments);
-                    };
+                audio_response = session.get(audio_url, headers=audio_headers, stream=True, timeout=30)
+                
+                if audio_response.status_code == 200 and int(audio_response.headers.get('Content-Length', 0)) > 10000:
+                    with open(output_path, 'wb') as f:
+                        for chunk in audio_response.iter_content(chunk_size=8192):
+                            f.write(chunk)
                     
-                    // Also monitor fetch requests
-                    const originalFetch = window.fetch;
-                    window.fetch = function(url, options) {
-                        if (typeof url === 'string' && 
-                           (url.includes('.mp3') || url.includes('.m4a') || 
-                            url.includes('/download/') || url.includes('/stream/'))) {
-                            window.downloadUrls.push(url);
-                        }
-                        return originalFetch.apply(this, arguments);
-                    };
-                """)
-                
-                # Click the button
-                download_button.click()
-                
-                # Wait for any network requests to complete
-                time.sleep(3)
-                
-                # Check if we captured any download URLs
-                download_urls = driver.execute_script("return window.downloadUrls;")
-                if download_urls and len(download_urls) > 0:
-                    download_url = download_urls[0]
-                    logger.info(f"Captured download URL after click: {download_url}")
-                    return download_url
+                    logger.info(f"Successfully downloaded audio from jPlayer source: {os.path.getsize(output_path)} bytes")
+                    return output_path
+                else:
+                    logger.error(f"Failed to download audio from jPlayer source: HTTP {audio_response.status_code}")
             except Exception as e:
-                logger.warning(f"Error clicking button or capturing network: {str(e)}")
+                logger.error(f"Error downloading from jPlayer source: {e}")
         
-        # If we still don't have a URL, search the entire page source for audio files
-        if not download_url:
-            logger.info("Searching page source for audio file URLs")
-            page_source = driver.page_source
-            url_patterns = [
-                r'(https?://[^"\'\s]+\.mp3)',
-                r'(https?://[^"\'\s]+\.m4a)',
-                r'(https?://[^"\'\s]+/download/[^"\'\s]+)',
-                r'(https?://[^"\'\s]+/stream/[^"\'\s]+)'
-            ]
+        # Method 2: Try to find direct audio URL in audio tag
+        audio_element = soup.find('audio', id='jp_audio_0')
+        if audio_element and audio_element.get('src'):
+            audio_url = audio_element['src']
+            logger.info(f"Found direct audio URL in audio tag: {audio_url}")
             
-            for pattern in url_patterns:
-                matches = re.findall(pattern, page_source)
-                if matches:
-                    download_url = matches[0]
-                    logger.info(f"Found audio URL in page source: {download_url}")
-                    return download_url
-        
-        if not download_url:
-            logger.error("Download not available - could not extract audio URL")
-            # Take screenshot for debugging
-            debug_path = os.path.join(TEMP_DIR, f"krakenfiles_debug_{uuid.uuid4()}.png")
-            driver.save_screenshot(debug_path)
-            logger.info(f"Saved debug screenshot to {debug_path}")
-            return None
+            # Make URL absolute if it's relative
+            if audio_url.startswith('//'):
+                audio_url = f"https:{audio_url}"
             
-        # Now download the file using curl
-        output_path = os.path.join(DOWNLOAD_DIR, f"kraken_{uuid.uuid4()}.mp3")
+            # Download the audio file
+            output_path = os.path.join(DOWNLOAD_DIR, f"download_{uuid.uuid4()}.mp3")
+            audio_response = session.get(audio_url, headers=headers, stream=True)
+            
+            if audio_response.status_code == 200 and int(audio_response.headers.get('Content-Length', 0)) > 10000:
+                with open(output_path, 'wb') as f:
+                    for chunk in audio_response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                
+                logger.info(f"Successfully downloaded audio from audio tag: {os.path.getsize(output_path)} bytes")
+                return output_path
+            else:
+                logger.error(f"Failed to download audio from audio tag: HTTP {audio_response.status_code}")
         
-        cmd = [
-            "curl",
-            "-L",
-            "-A", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "-o", output_path,
-            "--max-time", "300",  # Longer timeout for larger files
-            download_url
-        ]
+        # Method 3: Look for direct m4a/mp3 files in the HTML with more flexible pattern
+        m4a_pattern = re.search(r'((?:https?:)?//s\d+\.krakenfiles\.com/uploads/[^"\'>\s]+\.(m4a|mp3))', response.text)
+        if m4a_pattern:
+            # Get the URL and ensure it's absolute
+            audio_url = m4a_pattern.group(1)
+            if audio_url.startswith('//'):
+                audio_url = f"https:{audio_url}"
+            logger.info(f"Found direct m4a/mp3 URL: {audio_url}")
+            
+            # Download the audio file
+            output_path = os.path.join(DOWNLOAD_DIR, f"download_{uuid.uuid4()}.mp3")
+            audio_response = session.get(audio_url, headers=headers, stream=True)
+            
+            if audio_response.status_code == 200 and int(audio_response.headers.get('Content-Length', 0)) > 10000:
+                with open(output_path, 'wb') as f:
+                    for chunk in audio_response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                
+                logger.info(f"Successfully downloaded m4a/mp3: {os.path.getsize(output_path)} bytes")
+                return output_path
+            else:
+                logger.error(f"Failed to download m4a/mp3: HTTP {audio_response.status_code}")
         
-        result = subprocess.run(cmd, capture_output=True, check=False)
+        # Method 3: Try to extract the token and submit the download form
+        form = soup.find('form', id='dl-form')
+        if form:
+            token_input = form.find('input', {'name': 'token'})
+            if token_input and token_input.get('value'):
+                token = token_input['value']
+                form_action = form.get('action')
+                
+                if form_action and token:
+                    logger.info(f"Found download form: action={form_action}, token={token}")
+                    
+                    # Create absolute URL if needed
+                    if not form_action.startswith('http'):
+                        base_url = '/'.join(url.split('/')[:3])  # e.g., https://krakenfiles.com
+                        form_action = f"{base_url}{form_action}"
+                    
+                    # Submit the form
+                    post_headers = headers.copy()
+                    post_headers['Content-Type'] = 'application/x-www-form-urlencoded'
+                    post_headers['Origin'] = 'https://krakenfiles.com'
+                    post_headers['Referer'] = url
+                    
+                    form_data = {'token': token}
+                    post_response = session.post(form_action, data=form_data, headers=post_headers, allow_redirects=True)
+                    
+                    if post_response.status_code == 200 and len(post_response.content) > 10000:
+                        # Save the downloaded file
+                        output_path = os.path.join(DOWNLOAD_DIR, f"download_{uuid.uuid4()}.mp3")
+                        with open(output_path, 'wb') as f:
+                            f.write(post_response.content)
+                        
+                        logger.info(f"Successfully downloaded via form submission: {os.path.getsize(output_path)} bytes")
+                        return output_path
+                    else:
+                        logger.error(f"Form submission failed: HTTP {post_response.status_code}, Content Length: {len(post_response.content)}")
         
-        # Check if download succeeded
-        if result.returncode == 0 and os.path.exists(output_path) and os.path.getsize(output_path) > 10000:
-            logger.info(f"Successfully downloaded from Krakenfiles: {os.path.getsize(output_path)} bytes")
-            return output_path
-        else:
-            logger.error(f"Krakenfiles download failed: {result.stderr.decode() if hasattr(result, 'stderr') else 'Unknown error'}")
-            if os.path.exists(output_path):
-                os.remove(output_path)
-            return None
-    
-    except Exception as e:
-        logger.exception(f"Error downloading from Krakenfiles: {e}")
+        # If we reached here, all methods failed
+        logger.error("Failed to find any download method for the krakenfiles URL")
+        # Save the HTML for debugging
+        debug_path = os.path.join(TEMP_DIR, f"krakenfiles_source_{uuid.uuid4()}.html")
+        with open(debug_path, 'w', encoding='utf-8') as f:
+            f.write(response.text)
+        logger.info(f"Saved HTML source to {debug_path}")
+        
         return None
     
-    finally:
-        # Always close the browser
-        if driver:
-            try:
-                driver.quit()
-            except:
-                pass
+    except Exception as e:
+        logger.exception(f"Error downloading from krakenfiles: {e}")
+        return None
 
 def download_audio_from_krakenfiles(song):
     """Try to download audio content from krakenfiles.com links in the song"""
@@ -436,11 +297,11 @@ def download_audio_from_krakenfiles(song):
         logger.warning(f"No krakenfiles.com links found for song {song.id}: {song.name}")
         return None
     
-    # Try each URL until we get a successful download
+    # Try each URL until we succeed
     for url in krakenfiles_urls:
-        downloaded_file = download_from_krakenfiles_browser(url)
+        downloaded_file = download_from_krakenfiles(url)
         if downloaded_file:
-            logger.info(f"Successfully downloaded from krakenfiles.com URL: {url}")
+            logger.info(f"Successfully downloaded from: {url}")
             return downloaded_file
     
     # If we get here, we failed to download from any URL
@@ -755,12 +616,11 @@ if __name__ == "__main__":
     parser.add_argument('--song-id', type=int, help='Process only a specific song ID')
     args = parser.parse_args()
     
-    # Check if FFmpeg and curl are installed
+    # Check if FFmpeg is installed
     try:
         subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True, check=True)
-        subprocess.run(["curl", "--version"], capture_output=True, text=True, check=True)
     except (FileNotFoundError, subprocess.SubprocessError):
-        logger.error("Error: FFmpeg or curl is not installed or not in the PATH. Please install them first.")
+        logger.error("Error: FFmpeg is not installed or not in the PATH. Please install it first.")
         sys.exit(1)
         
     logger.info(f"Starting {'debug check' if args.debug else 'fix'} of krakenfiles.com previews...")

@@ -2239,3 +2239,243 @@ def get_collections(request):
         "status": "success",
         "collections": list(collections)
     })
+    
+def serve_krakenfiles_proxy(request):
+    """Proxy endpoint to fetch and serve audio from krakenfiles.com links"""
+    import os
+    import re
+    import time
+    import uuid
+    import logging
+    import tempfile
+    import requests
+    import urllib.parse
+    from django.http import FileResponse, HttpResponse, Http404, StreamingHttpResponse
+    
+    # Setup logging
+    logger = logging.getLogger(__name__)
+    
+    # Enhanced logging with more context
+    logger.info(f"[KRAKENFILES PROXY] Request received")
+    logger.info(f"[KRAKENFILES PROXY] Request URL: {request.path}")
+    logger.info(f"[KRAKENFILES PROXY] Request GET params: {request.GET}")
+    logger.info(f"[KRAKENFILES PROXY] Request method: {request.method}")
+    logger.info(f"[KRAKENFILES PROXY] Headers: {request.headers}")
+    
+    # Get krakenfiles URL from request
+    url = request.GET.get('url', '')
+    if not url:
+        logger.error("[KRAKENFILES PROXY] No URL provided")
+        return HttpResponse("Error: No URL provided", status=400)
+    
+    # URL decode if needed
+    if '%' in url:
+        url = urllib.parse.unquote(url)
+    
+    logger.info(f"[KRAKENFILES PROXY] Processing krakenfiles URL: {url}")
+    
+    # Verify it's a krakenfiles URL
+    if 'krakenfiles.com' not in url:
+        logger.error(f"[KRAKENFILES PROXY] Not a krakenfiles URL: {url}")
+        return HttpResponse("Error: Not a krakenfiles URL", status=400)
+    
+    # First method: try direct request with specific headers
+    try:
+        logger.info("[KRAKENFILES PROXY] Attempting direct request with custom headers")
+        
+        # Create a session to maintain cookies
+        session = requests.Session()
+        
+        # Set headers to mimic a browser
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'DNT': '1',
+            'Referer': url,
+        }
+        
+        # Visit the krakenfiles page first to get cookies and page content
+        response = session.get(url, headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            logger.warning(f"[KRAKENFILES PROXY] Initial page request failed: {response.status_code}")
+        else:
+            logger.info(f"[KRAKENFILES PROXY] Initial page request successful")
+            
+            # Extract direct audio source from page
+            page_content = response.text
+            
+            # Look for the audio element
+            audio_pattern = re.search(r'<audio\s+id=["\']jp_audio_0["\'][^>]*?src=["\']([^"\']+)["\']', page_content)
+            if audio_pattern:
+                audio_src = audio_pattern.group(1)
+                logger.info(f"[KRAKENFILES PROXY] Found direct audio URL: {audio_src}")
+                
+                # Get the audio content
+                audio_response = session.get(audio_src, headers=headers, stream=True)
+                
+                if audio_response.status_code == 200:
+                    # Create streaming response with appropriate headers
+                    response = StreamingHttpResponse(
+                        audio_response.iter_content(chunk_size=8192),
+                        content_type=audio_response.headers.get('Content-Type', 'audio/mpeg')
+                    )
+                    
+                    # Copy relevant headers
+                    for header in ['Content-Length', 'Content-Range', 'Accept-Ranges', 'ETag']:
+                        if header in audio_response.headers:
+                            response[header] = audio_response.headers[header]
+                    
+                    # Set CORS headers
+                    response['Access-Control-Allow-Origin'] = '*'
+                    response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+                    response['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Range'
+                    
+                    # Add cache-control headers to prevent caching
+                    response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+                    response['Pragma'] = 'no-cache'
+                    response['Expires'] = '0'
+                    
+                    logger.info("[KRAKENFILES PROXY] Successfully returning audio stream")
+                    return response
+            
+            # If direct audio URL not found, look for download form
+            form_pattern = re.search(r'<form[^>]*id=["\']dl-form["\'][^>]*action=["\']([^"\']+)["\'][^>]*>.*?<input[^>]*name=["\']token["\'][^>]*value=["\']([^"\']+)["\']', page_content, re.DOTALL)
+            if form_pattern:
+                form_action = form_pattern.group(1)
+                token_value = form_pattern.group(2)
+                
+                logger.info(f"[KRAKENFILES PROXY] Found download form: action={form_action}, token={token_value}")
+                
+                # Create absolute URL if needed
+                if not form_action.startswith("http"):
+                    base_url = "/".join(url.split("/")[0:3])  # Get base URL (e.g., https://krakenfiles.com)
+                    form_action = f"{base_url}{form_action}"
+                
+                # Submit the form
+                form_data = {'token': token_value}
+                download_response = session.post(form_action, data=form_data, headers=headers, stream=True, allow_redirects=True)
+                
+                if download_response.status_code == 200:
+                    content_type = download_response.headers.get('Content-Type', '')
+                    
+                    # Check if it's audio content
+                    if 'audio' in content_type or 'octet-stream' in content_type:
+                        logger.info(f"[KRAKENFILES PROXY] Form submission successful, got audio content")
+                        
+                        # Create streaming response
+                        response = StreamingHttpResponse(
+                            download_response.iter_content(chunk_size=8192),
+                            content_type=download_response.headers.get('Content-Type', 'audio/mpeg')
+                        )
+                        
+                        # Copy relevant headers
+                        for header in ['Content-Length', 'Content-Range', 'Accept-Ranges', 'ETag']:
+                            if header in download_response.headers:
+                                response[header] = download_response.headers[header]
+                        
+                        # Set CORS headers
+                        response['Access-Control-Allow-Origin'] = '*'
+                        response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+                        response['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Range'
+                        
+                        # Add cache-control headers to prevent caching
+                        response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+                        response['Pragma'] = 'no-cache'
+                        response['Expires'] = '0'
+                        
+                        logger.info("[KRAKENFILES PROXY] Successfully returning audio stream from form submission")
+                        return response
+    
+    except Exception as e:
+        logger.exception(f"[KRAKENFILES PROXY] Error in direct request method: {str(e)}")
+    
+    # Second method: try with curl command using subprocess
+    try:
+        logger.info("[KRAKENFILES PROXY] Attempting to download with curl")
+        
+        # Create a temporary file for the download
+        temp_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'temp_downloads')
+        os.makedirs(temp_dir, exist_ok=True)
+        output_path = os.path.join(temp_dir, f"krakenfiles_proxy_{uuid.uuid4()}.mp3")
+        
+        import subprocess
+        
+        # Use curl to download with proper headers
+        curl_command = [
+            "curl",
+            "-L",
+            "-A", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "-H", "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "-H", "Accept-Language: en-US,en;q=0.9",
+            "-H", "Accept-Encoding: gzip, deflate, br",
+            "-H", "Connection: keep-alive",
+            "-H", "Upgrade-Insecure-Requests: 1",
+            "-H", f"Referer: {url}",
+            "-o", output_path,
+            "--max-time", "30",
+            url
+        ]
+        
+        result = subprocess.run(curl_command, capture_output=True, check=False, timeout=30)
+        
+        # Check if download succeeded
+        if result.returncode == 0 and os.path.exists(output_path) and os.path.getsize(output_path) > 10000:
+            logger.info(f"[KRAKENFILES PROXY] Successfully downloaded file with curl: {os.path.getsize(output_path)} bytes")
+            
+            # Check content type with file command
+            mime_cmd = ["file", "--mime-type", output_path]
+            mime_result = subprocess.run(mime_cmd, capture_output=True, text=True, check=False)
+            
+            if "audio" in mime_result.stdout or "mp3" in mime_result.stdout or "mpeg" in mime_result.stdout:
+                logger.info(f"[KRAKENFILES PROXY] File is audio content: {mime_result.stdout}")
+                
+                # Serve the file
+                try:
+                    file_handle = open(output_path, 'rb')
+                    
+                    response = FileResponse(file_handle, content_type='audio/mpeg')
+                    
+                    # Set content length
+                    file_size = os.path.getsize(output_path)
+                    response['Content-Length'] = str(file_size)
+                    
+                    # Set CORS headers
+                    response['Access-Control-Allow-Origin'] = '*'
+                    response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+                    response['Access-Control-Allow-Headers'] = 'Origin, Content-Type, Accept, Range'
+                    
+                    # Add cache-control headers
+                    response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+                    response['Pragma'] = 'no-cache'
+                    response['Expires'] = '0'
+                    
+                    # Make sure to clean up the file when done
+                    def cleanup_file(response):
+                        if os.path.exists(output_path):
+                            os.remove(output_path)
+                        return response
+                    
+                    logger.info("[KRAKENFILES PROXY] Successfully returning audio file")
+                    return cleanup_file(response)
+                except Exception as e:
+                    logger.exception(f"[KRAKENFILES PROXY] Error serving file: {str(e)}")
+                    if os.path.exists(output_path):
+                        os.remove(output_path)
+    
+    except Exception as e:
+        logger.exception(f"[KRAKENFILES PROXY] Error in curl method: {str(e)}")
+        if 'output_path' in locals() and os.path.exists(output_path):
+            os.remove(output_path)
+    
+    # If all methods fail, return error
+    logger.error("[KRAKENFILES PROXY] All methods failed to retrieve audio content")
+    return HttpResponse("Error: Could not retrieve audio content from krakenfiles", status=500)

@@ -339,13 +339,28 @@ function playWithDurationLimit(audioUrl) {
             finalUrl = audioUrl.split('?')[0];
         }
     }
+    // Case 4: Handle krakenfiles.com URLs specially
+    else if (audioUrl.includes('krakenfiles.com')) {
+        // Encode the URL and route through our proxy
+        const encodedUrl = encodeURIComponent(audioUrl);
+        finalUrl = `/krakenfiles-proxy/?url=${encodedUrl}`;
+        console.log(`Using krakenfiles proxy for URL: ${audioUrl}`);
+        console.log(`Encoded URL: ${encodedUrl}`);
+        console.log(`Final proxy URL: ${finalUrl}`);
+        
+        // Add explicit params to help with debugging
+        params.append('source', 'krakenfiles');
+        params.append('debug', 'true');
+    }
     // Default: just use the base URL if no patterns match
     else {
         finalUrl = audioUrl.split('?')[0];
     }
     
     // Build the final URL with parameters
-    const completeUrl = `${finalUrl}?${params.toString()}`;
+    const completeUrl = finalUrl.includes('?') ? 
+        `${finalUrl}&${params.toString()}` : 
+        `${finalUrl}?${params.toString()}`;
     console.log(`Final audio URL: ${completeUrl}`);
     
     // Update status
@@ -435,6 +450,23 @@ function playWithDurationLimit(audioUrl) {
                             console.error('Server-provided direct URL also failed:', e);
                             if (statusEl) {
                                 statusEl.textContent = 'All playback methods failed. Please reload the page.';
+                            }
+                        });
+                    }, 500);
+                }
+                // For krakenfiles URLs, try a direct approach without parameters
+                else if (audioUrl.includes('krakenfiles.com')) {
+                    console.log('Trying direct krakenfiles proxy without parameters...');
+                    const encodedUrl = encodeURIComponent(audioUrl);
+                    const simpleUrl = `/krakenfiles-proxy/?url=${encodedUrl}`;
+                    
+                    setTimeout(() => {
+                        audioPlayer.src = simpleUrl;
+                        audioPlayer.load();
+                        audioPlayer.play().catch(e => {
+                            console.error('Direct krakenfiles proxy also failed:', e);
+                            if (statusEl) {
+                                statusEl.textContent = 'All krakenfiles playback methods failed. Please reload the page.';
                             }
                         });
                     }, 500);
