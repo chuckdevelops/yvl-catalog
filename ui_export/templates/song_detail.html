@@ -1,0 +1,1171 @@
+{% extends 'catalog/base.html' %}
+{% load catalog_filters %}
+
+{% block title %}{{ song.name }} | Playboi Carti Catalog{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'catalog:index' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'catalog:song_list' %}">Songs</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ song.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h1 class="h3 mb-0">{{ song.name }}
+                {% if song.file_date == 'Album Track' %}
+                    <span class="badge bg-secondary">Official Album Track</span>
+                {% endif %}
+            </h1>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
+                    <table class="table">
+                        <tr>
+                            <th style="width: 150px;">Era:</th>
+                            <td>{{ song.era }}</td>
+                        </tr>
+                        <tr>
+                            <th>Categories:</th>
+                            <td>
+                                {% if song.primary_tab_name and song.primary_tab_name != "Unknown" %}
+                                    <!-- Show primary tab (Released/Unreleased) first -->
+                                    <div class="mb-2">
+                                        <span class="badge bg-primary">{{ song.primary_tab_name }}</span>
+                                        
+                                        <!-- Use custom filter to handle AI badges -->
+                                        {% load catalog_filters %}
+                                        {% for tab in song.emoji_tab_names|filter_ai_badge:song.name %}
+                                            <span class="badge bg-info">{{ tab }}</span>
+                                        {% empty %}
+                                            <!-- No emoji tabs -->
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    <!-- Show other tabs if any exist -->
+                                    {% if song.other_tab_names %}
+                                        <div>
+                                            <strong>Additional Categories:</strong><br>
+                                            {% for tab in song.other_tab_names %}
+                                                <span class="badge bg-secondary">{{ tab }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                {% else %}
+                                    <em>Unknown</em>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if song.subsection_name %}
+                        <tr>
+                            <th>Subsection:</th>
+                            <td>{{ song.subsection_name }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>Type:</th>
+                            <td>{% if song.type and song.type != "NaN" and song.type != "nan" %}{{ song.type|format_type }}{% else %}<em></em>{% endif %}</td>
+                        </tr>
+                        <tr>
+                            <th>Quality:</th>
+                            <td>{% if song.quality and song.quality != "NaN" and song.quality != "nan" %}{{ song.quality }}{% else %}<em></em>{% endif %}</td>
+                        </tr>
+                        <tr>
+                            <th>Track Length:</th>
+                            <td>{% if song.track_length and song.track_length != "NaN" and song.track_length != "nan" %}{{ song.track_length }}{% else %}<em></em>{% endif %}</td>
+                        </tr>
+                        {% if song.display_album_name %}
+                        <tr>
+                            <th>Album:</th>
+                            <td>{{ song.display_album_name }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if song.display_track_number %}
+                        <tr>
+                            <th>Album Track #:</th>
+                            <td>{{ song.display_track_number }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <th>Leak Date:</th>
+                            <td>{% if song.leak_date and song.leak_date != "NaN" and song.leak_date != "nan" %}{{ song.leak_date }}{% else %}<em></em>{% endif %}</td>
+                        </tr>
+                        <tr>
+                            <th>File:</th>
+                            <td>{% if song.file_date and song.file_date != "NaN" and song.file_date != "nan" %}{{ song.file_date }}{% else %}<em></em>{% endif %}</td>
+                        </tr>
+                        <tr>
+                            <th>Available Length:</th>
+                            <td>{% if song.available_length and song.available_length != "NaN" and song.available_length != "nan" %}{{ song.available_length|remove_urls }}{% else %}<em></em>{% endif %}</td>
+                        </tr>
+                    </table>
+                    
+                    {% load catalog_filters %}
+                    
+                    <!-- Audio Preview Section - Shows for both songs with preview_url and those with direct music.froste.lol links -->
+                    {% if song.preview_url or song.preview_file_exists %}
+                    <div class="mt-4">
+                        <h4>
+                            {% if song.is_froste_link %}
+                                Full Track Preview <span class="badge bg-info">music.froste.lol</span>
+                            {% elif song.is_pillowcase_link %}
+                                Full Track Preview <span class="badge bg-warning">pillowcase.su</span>
+                            {% elif song.is_krakenfiles_link %}
+                                Full Track Preview <span class="badge bg-success">krakenfiles.com</span>
+                            {% else %}
+                                30-Second Preview
+                            {% endif %}
+                        </h4>
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <!-- Try multiple audio serving methods with duration constraint -->
+                                {% if song.preview_file_exists %}
+                                <div class="mb-3">
+                                    <audio id="preview-player" data-player-id="preview-player" controls preload="metadata" class="w-100">
+                                        <source id="preview-source" src="{{ song.preview_audio_url }}{% if not '?' in song.preview_audio_url %}?{% else %}&{% endif %}t={{ timestamp }}" type="audio/mpeg">
+                                        Your browser does not support the audio element.
+                                    </audio>
+                                    <div id="preview-player-status" class="text-muted small mt-1" style="display: none;"></div>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn {% if song.is_froste_link %}btn-info{% elif song.is_pillowcase_link %}btn-warning{% elif song.is_krakenfiles_link %}btn-success{% else %}btn-outline-secondary{% endif %}" 
+                                                    onclick="playWithDurationLimit('{{ song.preview_audio_url }}')">
+                                                {% if song.is_froste_link %}
+                                                <i class="fas fa-play me-1"></i> Play from music.froste.lol
+                                                {% elif song.is_pillowcase_link %}
+                                                <i class="fas fa-play me-1"></i> Play from pillowcase.su
+                                                {% elif song.is_krakenfiles_link %}
+                                                <i class="fas fa-play me-1"></i> Play from krakenfiles.com
+                                                {% else %}
+                                                <i class="fas fa-play me-1"></i> Play Preview
+                                                {% endif %}
+                                            </button>
+                                            
+                                            {% if song.direct_audio_url and song.direct_audio_url != song.preview_audio_url %}
+                                            <button type="button" class="btn btn-outline-secondary" 
+                                                    onclick="playWithDurationLimit('{{ song.direct_audio_url }}')">
+                                                <i class="fas fa-music me-1"></i> Alt Method
+                                            </button>
+                                            {% endif %}
+                                            
+                                            {% if song.original_source_url %}
+                                            <a href="{{ song.original_source_url }}" target="_blank" class="btn btn-outline-primary">
+                                                <i class="fas fa-external-link-alt me-1"></i> Open Source
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <script>
+                                    // Generate a cache-busting timestamp
+                                    const timestamp = new Date().getTime();
+                                    
+                                    document.addEventListener('DOMContentLoaded', function() {
+                                        const audioPlayer = document.getElementById('preview-player');
+                                        const statusEl = document.getElementById('audio-status');
+                                        
+                                        // Ensure audio player has latest timestamp
+                                        const sourceEl = document.getElementById('preview-source');
+                                        if (sourceEl && sourceEl.src && !sourceEl.src.includes('?t=')) {
+                                            sourceEl.src = sourceEl.src + '?t=' + timestamp;
+                                        }
+                                        
+                                        // Force reload of audio element
+                                        audioPlayer.load();
+                                        
+                                        // Add metadata loading listener
+                                        audioPlayer.addEventListener('loadedmetadata', function() {
+                                            console.log('Audio metadata loaded:', this.src);
+                                            console.log('Duration:', this.duration);
+                                            statusEl.style.display = 'none';
+                                            
+                                            // If the duration is invalid (NaN or 0), try to reload
+                                            if (isNaN(this.duration) || this.duration === 0) {
+                                                console.warn('Invalid duration, attempting to reload...');
+                                                reloadAudioPlayer();
+                                            }
+                                        });
+                                        
+                                        // Add error event listener with user feedback
+                                        audioPlayer.addEventListener('error', function(e) {
+                                            console.error('Audio player error:', e);
+                                            console.log('Error details:', this.error);
+                                            console.log('Audio src:', this.src);
+                                            
+                                            statusEl.textContent = 'Error loading audio. Trying alternative method...';
+                                            statusEl.style.display = 'block';
+                                            
+                                            // Try alternative method if available
+                                            if ('{{ song.direct_audio_url }}' && '{{ song.direct_audio_url }}' !== '{{ song.preview_audio_url }}') {
+                                                setTimeout(function() {
+                                                    playWithDurationLimit('{{ song.direct_audio_url }}?t=' + new Date().getTime());
+                                                }, 1000);
+                                            }
+                                        });
+                                        
+                                        // Add stalled event listener
+                                        audioPlayer.addEventListener('stalled', function() {
+                                            console.warn('Audio playback stalled');
+                                            statusEl.textContent = 'Audio playback stalled. Reloading...';
+                                            statusEl.style.display = 'block';
+                                            reloadAudioPlayer();
+                                        });
+                                        
+                                        // Add play event listener to log when audio starts playing
+                                        audioPlayer.addEventListener('play', function() {
+                                            console.log('Audio playback started:', this.src);
+                                            statusEl.style.display = 'none';
+                                            
+                                            // Send a log event to the server via fetch
+                                            fetch('/log-audio-play/', {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Content-Type': 'application/json',
+                                                    'X-CSRFToken': '{{ csrf_token }}'
+                                                },
+                                                body: JSON.stringify({
+                                                    song_id: {{ song.id }},
+                                                    src: this.src,
+                                                    timestamp: new Date().toISOString()
+                                                })
+                                            }).catch(err => console.log('Logging request sent'));
+                                        });
+                                        
+                                        // Add waiting event listener
+                                        audioPlayer.addEventListener('waiting', function() {
+                                            console.log('Audio waiting for data...');
+                                            statusEl.textContent = 'Loading audio data...';
+                                            statusEl.style.display = 'block';
+                                        });
+                                        
+                                        // Log when method buttons are clicked
+                                        const methodButtons = document.querySelectorAll('.btn-group button');
+                                        methodButtons.forEach(button => {
+                                            button.addEventListener('click', function() {
+                                                console.log('Method button clicked:', this.textContent.trim());
+                                                const url = this.getAttribute('onclick').match(/'([^']+)'/)[1];
+                                                console.log('URL to play:', url);
+                                                
+                                                // Add cache busting to URL if needed
+                                                if (url && !url.includes('?t=')) {
+                                                    playWithDurationLimit(url + '?t=' + new Date().getTime());
+                                                    // Prevent the original click handler
+                                                    return false;
+                                                }
+                                            });
+                                        });
+                                        
+                                        // Function to reload the audio player with a new timestamp
+                                        function reloadAudioPlayer() {
+                                            const newTimestamp = new Date().getTime();
+                                            let srcUrl = sourceEl.src.split('?')[0] + '?t=' + newTimestamp;
+                                            sourceEl.src = srcUrl;
+                                            audioPlayer.load();
+                                            console.log('Reloaded audio player with new src:', srcUrl);
+                                        }
+                                    });
+                                </script>
+                                
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" id="limitDuration">
+                                    <label class="form-check-label" for="limitDuration">
+                                        Limit playback to 20 seconds (for older browsers)
+                                    </label>
+                                </div>
+                                
+                                <script>
+function playWithDurationLimit(audioUrl) {
+    const audioPlayer = document.getElementById('preview-player');
+    const statusEl = document.getElementById('preview-player-status');
+    const limitDuration = document.getElementById('limitDuration').checked;
+    
+    // Always use fresh timestamp for cache-busting, regardless of existing parameters
+    const timestamp = new Date().getTime();
+    
+    // IMPORTANT ENHANCEMENT: Always prefer direct /media/previews/ URLs
+    // If we have a URL that looks like an audio-serve route, convert it to direct media URL
+    let finalUrl = "";
+    
+    // Extract and handle parameters
+    let params = new URLSearchParams();
+    params.append('t', timestamp);  // Add timestamp for cache busting
+    
+    // Case 1: Direct UUID pattern detection (preferred method)
+    const uuidPattern = /[0-9a-f-]{8}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{4}-[0-9a-f-]{12}\.mp3/i;
+    const uuidMatch = audioUrl.match(uuidPattern);
+    
+    if (uuidMatch) {
+        // We found a UUID in the URL - use it directly with media/previews path
+        finalUrl = `/media/previews/${uuidMatch[0]}`;
+        console.log(`Using UUID from URL: ${finalUrl}`);
+    }
+    // Case 2: Audio-serve route with UUID
+    else if (audioUrl.includes('/audio-serve/')) {
+        // Extract the filename after audio-serve/
+        const filename = audioUrl.split('/audio-serve/')[1].split('?')[0];
+        // Use direct media URL instead (more reliable)
+        finalUrl = `/media/previews/${filename}`;
+        console.log(`Converting audio-serve to direct media URL: ${finalUrl}`);
+        
+        // Preserve source parameter if present
+        if (audioUrl.includes('?source=')) {
+            const sourceUrl = audioUrl.split('?source=')[1].split('&')[0];
+            params.append('source', sourceUrl);
+        }
+    }
+    // Case 3: Static proxy route
+    else if (audioUrl.includes('/static/proxy-')) {
+        try {
+            const fileName = audioUrl.split('/static/proxy-')[1].split('?')[0].split('-').pop();
+            finalUrl = `/media/previews/${fileName}`;
+            console.log(`Converted proxy URL to direct media: ${finalUrl}`);
+            
+            // Preserve url parameter if present
+            if (audioUrl.includes('?url=')) {
+                const sourceUrl = audioUrl.split('?url=')[1].split('&')[0];
+                params.append('url', sourceUrl);
+            }
+        } catch(e) {
+            console.error("Couldn't convert proxy URL to direct media URL:", e);
+            // Fall back to original URL
+            finalUrl = audioUrl.split('?')[0];
+        }
+    }
+    // Case 4: Handle krakenfiles.com URLs specially
+    else if (audioUrl.includes('krakenfiles.com')) {
+        // Encode the URL and route through our proxy
+        const encodedUrl = encodeURIComponent(audioUrl);
+        finalUrl = `/krakenfiles-proxy/?url=${encodedUrl}`;
+        console.log(`Using krakenfiles proxy for URL: ${audioUrl}`);
+        console.log(`Encoded URL: ${encodedUrl}`);
+        console.log(`Final proxy URL: ${finalUrl}`);
+        
+        // Add explicit params to help with debugging
+        params.append('source', 'krakenfiles');
+        params.append('debug', 'true');
+    }
+    // Default: just use the base URL if no patterns match
+    else {
+        finalUrl = audioUrl.split('?')[0];
+    }
+    
+    // Build the final URL with parameters
+    const completeUrl = finalUrl.includes('?') ? 
+        `${finalUrl}&${params.toString()}` : 
+        `${finalUrl}?${params.toString()}`;
+    console.log(`Final audio URL: ${completeUrl}`);
+    
+    // Update status
+    if (statusEl) {
+        statusEl.textContent = 'Loading audio...';
+        statusEl.style.display = 'block';
+    }
+    
+    // Remove existing timeupdate listeners
+    audioPlayer.removeEventListener('timeupdate', durationLimitHandler);
+    
+    // Set audio source
+    audioPlayer.src = completeUrl;
+    
+    // Force reload to ensure new source is used
+    audioPlayer.load();
+    
+    // Add event listener for timeupdate if limiting duration
+    if (limitDuration) {
+        audioPlayer.addEventListener('timeupdate', durationLimitHandler);
+    }
+    
+    // Reset the audio player in case it's stuck
+    audioPlayer.currentTime = 0;
+    
+    // Log all player events for debugging
+    const logPlayerEvent = (event) => {
+        console.log(`Audio event: ${event.type}`);
+    };
+    
+    // Add temporary event listeners for debugging
+    const events = ['loadstart', 'loadedmetadata', 'loadeddata', 'canplay', 'canplaythrough', 'playing', 'waiting', 'error'];
+    events.forEach(event => {
+        audioPlayer.addEventListener(event, logPlayerEvent, { once: true });
+    });
+    
+    // Start playing after a short delay to allow metadata loading
+    setTimeout(() => {
+        audioPlayer.play()
+            .then(() => {
+                console.log('Playback started successfully');
+                if (statusEl) {
+                    statusEl.style.display = 'none';
+                }
+            })
+            .catch(e => {
+                console.error('Error playing audio:', e);
+                if (statusEl) {
+                    statusEl.textContent = 'Error starting playback. Trying alternatives...';
+                    statusEl.style.display = 'block';
+                }
+                
+                // Fallback logic:
+                // 1. If we were using direct URL, try audio-serve instead
+                // 2. If we were using audio-serve, make sure we have the right UUID format
+                // 3. Try with no cache parameter
+                
+                // We already tried direct media URL, now try audio-serve
+                if (completeUrl.includes('/media/previews/')) {
+                    // Extract the filename 
+                    const fileName = completeUrl.split('/media/previews/')[1].split('?')[0];
+                    const audioServeUrl = `/audio-serve/${fileName}?t=${new Date().getTime()}`;
+                    console.log(`Trying audio-serve fallback: ${audioServeUrl}`);
+                    
+                    setTimeout(() => {
+                        // Set directly on player to bypass our URL conversion
+                        audioPlayer.src = audioServeUrl;
+                        audioPlayer.load();
+                        audioPlayer.play().catch(e => {
+                            console.error('Audio-serve fallback also failed:', e);
+                            if (statusEl) {
+                                statusEl.textContent = 'All playback methods failed. Please reload the page.';
+                            }
+                        });
+                    }, 500);
+                }
+                // If the song has a known direct_audio_url from the server, try that
+                else if ('{{ song.direct_audio_url }}' && '{{ song.direct_audio_url }}' !== '{{ song.preview_url }}') {
+                    console.log('Trying server-provided direct URL...');
+                    const altUrl = '{{ song.direct_audio_url }}' + '?t=' + new Date().getTime();
+                    
+                    setTimeout(() => {
+                        // Direct assignment to avoid our conversion logic
+                        audioPlayer.src = altUrl;
+                        audioPlayer.load();
+                        audioPlayer.play().catch(e => {
+                            console.error('Server-provided direct URL also failed:', e);
+                            if (statusEl) {
+                                statusEl.textContent = 'All playback methods failed. Please reload the page.';
+                            }
+                        });
+                    }, 500);
+                }
+                // For krakenfiles URLs, try a direct approach without parameters
+                else if (audioUrl.includes('krakenfiles.com')) {
+                    console.log('Trying direct krakenfiles proxy without parameters...');
+                    const encodedUrl = encodeURIComponent(audioUrl);
+                    const simpleUrl = `/krakenfiles-proxy/?url=${encodedUrl}`;
+                    
+                    setTimeout(() => {
+                        audioPlayer.src = simpleUrl;
+                        audioPlayer.load();
+                        audioPlayer.play().catch(e => {
+                            console.error('Direct krakenfiles proxy also failed:', e);
+                            if (statusEl) {
+                                statusEl.textContent = 'All krakenfiles playback methods failed. Please reload the page.';
+                            }
+                        });
+                    }, 500);
+                }
+                // Last resort: try with simple standard parameters
+                else {
+                    console.log('Trying with minimal URL parameters...');
+                    const simpleUrl = finalUrl;  // No parameters
+                    
+                    setTimeout(() => {
+                        audioPlayer.src = simpleUrl;
+                        audioPlayer.load();
+                        audioPlayer.play().catch(e => {
+                            console.error('Minimal parameters approach also failed:', e);
+                            if (statusEl) {
+                                statusEl.textContent = 'All playback methods failed. Please reload the page.';
+                            }
+                        });
+                    }, 500);
+                }
+            });
+    }, 300);
+}
+                                
+                                // Duration limit handler function (defined outside to make removal easier)
+                                function durationLimitHandler() {
+                                    const audioPlayer = document.getElementById('preview-player');
+                                    // Stop after 20 seconds
+                                    if (audioPlayer.currentTime >= 20) {
+                                        audioPlayer.pause();
+                                        // Remove listener to prevent multiple pauses
+                                        audioPlayer.removeEventListener('timeupdate', durationLimitHandler);
+                                    }
+                                }
+                                
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    // Initialize with duration limit
+                                    const audioPlayer = document.getElementById('preview-player');
+                                    const limitDuration = document.getElementById('limitDuration');
+                                    
+                                    limitDuration.addEventListener('change', function() {
+                                        // Remove existing listener first to avoid duplicates
+                                        audioPlayer.removeEventListener('timeupdate', durationLimitHandler);
+                                        
+                                        // Add new listener if checked
+                                        if (this.checked) {
+                                            audioPlayer.addEventListener('timeupdate', durationLimitHandler);
+                                        }
+                                    });
+                                    
+                                    // Initial setup
+                                    if (limitDuration.checked) {
+                                        audioPlayer.addEventListener('timeupdate', durationLimitHandler);
+                                    }
+                                });
+                                </script>
+                                {% else %}
+                                <p class="text-muted">Preview file not found.</p>
+                                {% endif %}
+                                <div class="mt-2">
+                                    <a href="{% url 'catalog:audio_test' %}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-external-link-alt me-1"></i> Open Audio Testing Page
+                                    </a>
+                                    <a href="/audio_comparison.html" target="_blank" class="btn btn-sm btn-outline-success ms-1">
+                                        <i class="fas fa-music me-1"></i> Audio Bitrate Analysis
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if song.links %}
+                    <div class="mt-4">
+                        <h4>{% if song.preview_url %}Full Track Options{% else %}Listen{% endif %}</h4>
+                        <div id="player-container">
+                            {% for url in song.links|extract_urls %}
+                            {% with domain=url|get_domain download_url=url|get_download_url %}
+                            <div class="card mb-2">
+                                <div class="card-body p-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <strong>{{ domain }}</strong>
+                                        <span class="badge bg-secondary">{{ song.type|format_type }}</span>
+                                    </div>
+                                    
+                                    <div class="d-flex">
+                                        <!-- Play button -->
+                                        <a href="{{ url }}" target="_blank" class="btn {% if 'music.froste.lol' in domain %}btn-info{% elif 'pillowcase.su' in domain %}btn-warning{% elif 'krakenfiles.com' in domain %}btn-success{% elif 'SoundCloud' in domain %}btn-danger{% elif 'Spotify' in domain %}btn-success{% else %}btn-primary{% endif %} me-2">
+                                            <i class="fas fa-play me-1"></i> Play
+                                        </a>
+                                        
+                                        <!-- Download button (when available) -->
+                                        {% if download_url %}
+                                        <a href="{{ download_url }}" class="btn btn-outline-primary" download>
+                                            <i class="fas fa-download me-1"></i> Download
+                                        </a>
+                                        {% endif %}
+                                        
+                                        <!-- No preview button for automatic processing -->
+                                        {% comment %}
+                                        {% if not song.preview_url and request.user.is_staff %}
+                                        <button class="btn btn-outline-secondary ms-2 generate-preview-btn" 
+                                                data-song-id="{{ song.id }}"
+                                                data-url="{{ url }}">
+                                            <i class="fas fa-music me-1"></i> Create Preview
+                                        </button>
+                                        {% endif %}
+                                        {% endcomment %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endwith %}
+                            {% empty %}
+                            <p class="text-muted">No playable links available.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if song.notes %}
+                    <div class="mt-4">
+                        <h4>Notes</h4>
+                        <div class="card">
+                            <div class="card-body bg-light">
+                                {{ song.notes|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Version Variants Section -->
+                    {% if song.version_variants %}
+                    <div class="mt-4">
+                        <h4>Other Versions</h4>
+                        <div class="list-group">
+                            {% for variant in song.version_variants %}
+                            <a href="{% url 'catalog:song_detail' song_id=variant.id %}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <div>{{ variant.name }}</div>
+                                    <small>{{ variant.era }}</small>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-4">
+                    <!-- Recommended Songs -->
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Recommended Songs</h5>
+                            <span class="small text-muted" data-bs-toggle="tooltip" title="Based on what other users with similar taste have enjoyed">
+                                <i class="fas fa-info-circle"></i>
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="list-group">
+                                {% for recommended in recommended_songs %}
+                                <a href="{% url 'catalog:song_detail' song_id=recommended.id %}" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h6 class="mb-1">{{ recommended.name }}</h6>
+                                        <small>{{ recommended.era }}</small>
+                                    </div>
+                                </a>
+                                {% empty %}
+                                <p class="text-muted">No recommended songs found.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Voting Card -->
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="row text-center" id="voting-section">
+                                <div class="col-6">
+                                    <button id="like-btn" class="btn btn-outline-secondary mb-2 w-100 {% if user_vote == 'like' %}active{% endif %}" 
+                                            data-vote-type="like" data-song-id="{{ song.id }}">
+                                        <i class="fas fa-thumbs-up"></i>
+                                    </button>
+                                    <div class="like-count">{{ like_count }}</div>
+                                </div>
+                                <div class="col-6">
+                                    <button id="dislike-btn" class="btn btn-outline-secondary mb-2 w-100 {% if user_vote == 'dislike' %}active{% endif %}" 
+                                            data-vote-type="dislike" data-song-id="{{ song.id }}">
+                                        <i class="fas fa-thumbs-down"></i>
+                                    </button>
+                                    <div class="dislike-count">{{ dislike_count }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Bookmark Card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Bookmark Song</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Banner display (shows which collections this song is in) -->
+                            <div id="collection-banners" class="mb-3"></div>
+                            
+                            <!-- Bookmark form -->
+                            <div class="input-group mb-3">
+                                <input type="text" id="collection-name" class="form-control" placeholder="Collection name" value="My Collection">
+                                <button id="bookmark-btn" class="btn btn-primary" data-song-id="{{ song.id }}">
+                                    <i class="fas fa-bookmark"></i> Save
+                                </button>
+                            </div>
+                            
+                            <!-- Link to view all bookmarks -->
+                            <div class="text-center mt-3">
+                                <a href="#" id="view-bookmarks-link" class="text-decoration-none">
+                                    <small>View all your bookmarks</small>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Fixed event listener - correctly spelled DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', function() {
+        const songId = "{{ song.id }}";
+        const voteButtons = document.querySelectorAll('#like-btn, #dislike-btn');
+        const bookmarkBtn = document.getElementById('bookmark-btn');
+        const collectionNameInput = document.getElementById('collection-name');
+        const collectionBannersContainer = document.getElementById('collection-banners');
+        const viewBookmarksLink = document.getElementById('view-bookmarks-link');
+        const generatePreviewButtons = document.querySelectorAll('.generate-preview-btn');
+        
+        // Initialize tooltips
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+        
+        // Check localStorage for saved votes and pre-set button state
+        function checkSavedVotes() {
+            // Get saved votes from localStorage
+            const savedVotes = JSON.parse(localStorage.getItem('cartiCatalogVotes') || '{}');
+            
+            // If this song has a saved vote, update UI
+            if (savedVotes[songId]) {
+                const savedVoteType = savedVotes[songId];
+                
+                // Pre-select the right button (if server didn't already set it)
+                if (!document.querySelector('.btn.active')) {
+                    document.querySelector(`#${savedVoteType}-btn`).classList.add('active');
+                }
+            }
+        }
+        
+        // Save vote to localStorage
+        function saveVoteToLocalStorage(songId, voteType) {
+            // Get existing votes or initialize empty object
+            const savedVotes = JSON.parse(localStorage.getItem('cartiCatalogVotes') || '{}');
+            
+            if (voteType === null) {
+                // If vote was removed, delete from localStorage
+                delete savedVotes[songId];
+            } else {
+                // Update with new vote
+                savedVotes[songId] = voteType;
+            }
+            
+            // Save back to localStorage
+            localStorage.setItem('cartiCatalogVotes', JSON.stringify(savedVotes));
+        }
+        
+        // Handle vote button clicks
+        voteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const songId = this.dataset.songId;
+                const voteType = this.dataset.voteType;
+                
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('vote_type', voteType);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                
+                // Send vote to server
+                fetch(`/songs/${songId}/vote/`, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Update counts
+                        document.querySelector('.like-count').textContent = data.like_count;
+                        document.querySelector('.dislike-count').textContent = data.dislike_count;
+                        
+                        // Update active state of buttons
+                        document.getElementById('like-btn').classList.toggle('active', data.user_vote === 'like');
+                        document.getElementById('dislike-btn').classList.toggle('active', data.user_vote === 'dislike');
+                        
+                        // Save to localStorage
+                        saveVoteToLocalStorage(songId, data.user_vote);
+                    } else if (data.status === 'error') {
+                        // Show error message
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            });
+        });
+        
+        // ----- BOOKMARKS FUNCTIONALITY -----
+        
+        // Check localStorage for existing bookmarks
+        function checkSavedBookmarks() {
+            // Get bookmarks data from server for this song
+            fetch(`/bookmarks/?song_id=${songId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    updateCollectionBanners(data.collections || []);
+                }
+            })
+            .catch(error => {
+                console.error('Error checking bookmarks:', error);
+            });
+        }
+        
+        // Create banner for each collection
+        function updateCollectionBanners(collections) {
+            // Clear current banners
+            collectionBannersContainer.innerHTML = '';
+            
+            if (collections.length === 0) {
+                collectionBannersContainer.innerHTML = '<span class="text-muted">Not in any collection yet</span>';
+                return;
+            }
+            
+            // Add collection banners
+            collections.forEach(collection => {
+                const banner = document.createElement('div');
+                banner.className = 'badge bg-info me-2 mb-2 p-2 d-inline-flex align-items-center';
+                banner.innerHTML = `
+                    <span>${collection}</span>
+                    <button type="button" class="ms-2 p-1 rounded-circle bg-danger text-white border-0" 
+                        style="width: 16px; height: 16px; font-size: 10px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;"
+                        aria-label="Remove from ${collection}" 
+                        data-collection="${collection}">
+                        ✕
+                    </button>
+                `;
+                collectionBannersContainer.appendChild(banner);
+                
+                // Add remove handler to the close button
+                const closeBtn = banner.querySelector('button');
+                closeBtn.addEventListener('click', function() {
+                    removeFromCollection(this.dataset.collection);
+                });
+            });
+        }
+        
+        // Handle bookmark button click
+        if (bookmarkBtn) {
+            bookmarkBtn.addEventListener('click', function() {
+                const songId = this.dataset.songId;
+                const collectionName = collectionNameInput.value.trim() || 'My Collection';
+                
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('collection_name', collectionName);
+                formData.append('action', 'add');
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                
+                // Send bookmark to server
+                fetch(`/songs/${songId}/bookmark/`, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Update collection banners
+                        updateCollectionBanners(data.collections);
+                        // Clear the input after successful add
+                        collectionNameInput.value = '';
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            });
+        }
+        
+        // Remove from collection
+        function removeFromCollection(collectionName) {
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('collection_name', collectionName);
+            formData.append('action', 'remove');
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            
+            // Send remove request to server
+            fetch(`/songs/${songId}/bookmark/`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update collection banners
+                    updateCollectionBanners(data.collections);
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+        
+        // Set up view bookmarks link
+        if (viewBookmarksLink) {
+            viewBookmarksLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Open a modal or redirect to a bookmarks page
+                // For simplicity, we'll create a basic modal with bookmarks
+                showBookmarksModal();
+            });
+        }
+        
+        // Create and show bookmarks modal
+        function showBookmarksModal() {
+            // Create modal container if it doesn't exist
+            let modal = document.getElementById('bookmarks-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'bookmarks-modal';
+                modal.className = 'modal fade';
+                modal.setAttribute('tabindex', '-1');
+                modal.innerHTML = `
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Your Bookmarked Songs</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <select id="collection-filter" class="form-select">
+                                        <option value="">All Collections</option>
+                                    </select>
+                                </div>
+                                <div id="bookmarks-list" class="list-group">
+                                    <div class="text-center">
+                                        <div class="spinner-border" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                // Initialize the Bootstrap modal
+                const modalObj = new bootstrap.Modal(modal);
+                modal._bsModal = modalObj;
+                
+                // Set up collection filter change handler
+                const collectionFilter = modal.querySelector('#collection-filter');
+                collectionFilter.addEventListener('change', function() {
+                    loadBookmarks(this.value);
+                });
+            }
+            
+            // Show the modal
+            modal._bsModal.show();
+            
+            // Load collections and bookmarks
+            loadCollections();
+            loadBookmarks();
+        }
+        
+        // Load collections for the filter dropdown
+        function loadCollections() {
+            fetch('/collections/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const collectionFilter = document.getElementById('collection-filter');
+                    
+                    // Clear existing options except the first one
+                    while (collectionFilter.options.length > 1) {
+                        collectionFilter.remove(1);
+                    }
+                    
+                    // Add options for each collection
+                    data.collections.forEach(collection => {
+                        const option = document.createElement('option');
+                        option.value = collection.collection_name;
+                        option.textContent = `${collection.collection_name} (${collection.count})`;
+                        collectionFilter.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading collections:', error);
+            });
+        }
+        
+        // Load bookmarks
+        function loadBookmarks(collection = '') {
+            const bookmarksList = document.getElementById('bookmarks-list');
+            bookmarksList.innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            `;
+            
+            const url = collection ? `/bookmarks/?collection=${encodeURIComponent(collection)}` : '/bookmarks/';
+            
+            fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    bookmarksList.innerHTML = '';
+                    
+                    if (data.bookmarks.length === 0) {
+                        bookmarksList.innerHTML = '<p class="text-center text-muted">No bookmarks found</p>';
+                        return;
+                    }
+                    
+                    // Add each bookmark to the list
+                    data.bookmarks.forEach(bookmark => {
+                        const item = document.createElement('a');
+                        item.href = `/songs/${bookmark.id}/`;
+                        item.className = 'list-group-item list-group-item-action';
+                        
+                        let primaryTab = '';
+                        if (bookmark.primary_tab) {
+                            primaryTab = `<span class="badge bg-primary">${bookmark.primary_tab}</span> `;
+                        }
+                        
+                        item.innerHTML = `
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">${bookmark.name}</h5>
+                                <small>${bookmark.era || 'Unknown Era'}</small>
+                            </div>
+                            <div class="d-flex w-100 justify-content-between">
+                                <div>
+                                    ${primaryTab}
+                                    <span class="badge bg-info d-inline-flex align-items-center">
+                                        <span>${bookmark.collection}</span>
+                                        <button type="button" class="ms-1 p-1 rounded-circle bg-danger text-white border-0" 
+                                            style="width: 14px; height: 14px; font-size: 8px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;"
+                                            aria-label="Remove from ${bookmark.collection}" 
+                                            data-song-id="${bookmark.id}" 
+                                            data-collection="${bookmark.collection}">
+                                            ✕
+                                        </button>
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                        bookmarksList.appendChild(item);
+                        
+                        // Add event listener to the remove button
+                        const removeBtn = item.querySelector('button');
+                        if (removeBtn) {
+                            removeBtn.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                e.stopPropagation(); // Prevent navigation to song page
+                                
+                                const songId = this.dataset.songId;
+                                const collectionName = this.dataset.collection;
+                                
+                                // Confirm before removing
+                                if (confirm(`Remove "${bookmark.name}" from collection "${collectionName}"?`)) {
+                                    removeBookmark(songId, collectionName, () => {
+                                        // Refresh the list after removal
+                                        loadBookmarks(document.getElementById('collection-filter').value);
+                                    });
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    bookmarksList.innerHTML = `<p class="text-center text-danger">${data.message || 'Error loading bookmarks'}</p>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading bookmarks:', error);
+                bookmarksList.innerHTML = '<p class="text-center text-danger">Error loading bookmarks</p>';
+            });
+        }
+        
+        // Function to remove a bookmark (used in the modal list)
+        function removeBookmark(songId, collectionName, callback) {
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('collection_name', collectionName);
+            formData.append('action', 'remove');
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            
+            // Send remove request to server
+            fetch(`/songs/${songId}/bookmark/`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // If we're viewing the current song's bookmarks, update the banners
+                    if (songId === "{{ song.id }}") {
+                        updateCollectionBanners(data.collections);
+                    }
+                    
+                    // Call the callback function if provided
+                    if (typeof callback === 'function') {
+                        callback();
+                    }
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error removing bookmark. Please try again.');
+            });
+        }
+        
+        
+        // Check for saved votes and bookmarks on page load
+        checkSavedVotes();
+        checkSavedBookmarks();
+        
+        // Handler for generate preview buttons (admin only)
+        generatePreviewButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const songId = this.dataset.songId;
+                const url = this.dataset.url;
+                const button = this;
+                
+                // Change button state
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+                
+                // Make AJAX request to generate preview
+                fetch(`/api/generate-preview/${songId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ url: url })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Preview generated successfully
+                        button.innerHTML = '<i class="fas fa-check"></i> Preview Created';
+                        button.classList.remove('btn-outline-secondary');
+                        button.classList.add('btn-success');
+                        
+                        // Reload the page after a short delay to show the new preview
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        // Error generating preview
+                        button.innerHTML = '<i class="fas fa-times"></i> Failed';
+                        button.classList.remove('btn-outline-secondary');
+                        button.classList.add('btn-danger');
+                        console.error('Error generating preview:', data.message);
+                    }
+                })
+                .catch(error => {
+                    button.innerHTML = '<i class="fas fa-times"></i> Error';
+                    button.classList.remove('btn-outline-secondary');
+                    button.classList.add('btn-danger');
+                    console.error('Error:', error);
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

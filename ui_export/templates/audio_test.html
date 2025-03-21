@@ -1,0 +1,113 @@
+{% extends 'catalog/base.html' %}
+
+{% block title %}Audio File Testing{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Audio File Testing</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h4 mb-0">Environment Information</h2>
+        </div>
+        <div class="card-body">
+            <p><strong>Media Root:</strong> {{ media_root }}</p>
+            <p><strong>Media URL:</strong> {{ media_url }}</p>
+            <p><strong>MP3 Files Found:</strong> {{ mp3_files|length }}</p>
+        </div>
+    </div>
+    
+    <!-- Special test for re-encoded file -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h2 class="h4 mb-0">Re-encoding Test</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4 class="h6">Original Broken File</h4>
+                    <audio controls class="w-100 mb-3">
+                        <source src="/media/previews/0e75dda9-fc84-4e1a-9b2d-85cec2dfbba6.mp3" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                </div>
+                <div class="col-md-6">
+                    <h4 class="h6">Re-encoded Version</h4>
+                    <audio controls class="w-100 mb-3">
+                        <source src="/media/previews/reencoded_test.mp3" type="audio/mpeg">
+                        Your browser does not support the audio element.
+                    </audio>
+                </div>
+            </div>
+            <div class="alert alert-info mt-3">
+                <p><strong>Test explanation:</strong> The re-encoded file was created using a complete re-encoding process (not just changing the bitrate). If this version works, the issue is in the encoding format itself, and we can fix it with a re-encoding script.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for file in mp3_files %}
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h3 class="h5 mb-0">{{ file.filename }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <h4 class="h6">File Details</h4>
+                            <ul class="list-group mb-3">
+                                <li class="list-group-item"><strong>Size:</strong> {{ file.size|filesizeformat }}</li>
+                                <li class="list-group-item"><strong>Readable:</strong> {% if file.readable %}Yes{% else %}No{% endif %}</li>
+                                <li class="list-group-item"><strong>Permissions:</strong> {{ file.permissions }}</li>
+                            </ul>
+                            <h4 class="h6">URLs</h4>
+                            <ul class="list-group">
+                                <li class="list-group-item"><strong>Direct URL:</strong> {{ file.direct_url }}</li>
+                                <li class="list-group-item"><strong>Custom Handler URL:</strong> {{ file.custom_url }}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-8">
+                            <h4 class="h6">Method 1: Direct Media URL</h4>
+                            <audio controls class="w-100 mb-3" id="method1-player-{{ forloop.counter }}">
+                                <source src="{{ file.direct_url }}" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                            
+                            <h4 class="h6">Method 2: Custom Audio Server</h4>
+                            <audio controls class="w-100" id="method2-player-{{ forloop.counter }}">
+                                <source src="{{ file.custom_url }}" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                            
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const method1Player = document.getElementById('method1-player-{{ forloop.counter }}');
+                                    const method2Player = document.getElementById('method2-player-{{ forloop.counter }}');
+                                    
+                                    method1Player.addEventListener('error', function(e) {
+                                        console.error('Method 1 player error for {{ file.filename }}:', e);
+                                        console.log('Error details:', this.error);
+                                    });
+                                    
+                                    method2Player.addEventListener('error', function(e) {
+                                        console.error('Method 2 player error for {{ file.filename }}:', e);
+                                        console.log('Error details:', this.error);
+                                    });
+                                });
+                            </script>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-warning">
+                No MP3 files found in the previews directory.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

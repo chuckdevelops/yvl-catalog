@@ -1,0 +1,225 @@
+{% extends 'catalog/base.html' %}
+{% load catalog_filters %}
+
+{% block title %}Playboi Carti Social Media Accounts{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <h1 class="mb-4">Playboi Carti Social Media Accounts</h1>
+        
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Filters</h3>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'catalog:social_media' %}" class="row">
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="era-filter" class="form-label">Era</label>
+                            <select name="era" id="era-filter" class="form-select">
+                                <option value="">All Eras</option>
+                                {% for era in eras %}
+                                    <option value="{{ era }}" {% if era == era_filter %}selected{% endif %}>
+                                        {{ era }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="platform-filter" class="form-label">Platform</label>
+                            <select name="platform" id="platform-filter" class="form-select">
+                                <option value="">All Platforms</option>
+                                {% for platform in platforms %}
+                                    <option value="{{ platform }}" {% if platform == platform_filter %}selected{% endif %}>
+                                        {{ platform }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="active-filter" class="form-label">Status</label>
+                            <select name="active" id="active-filter" class="form-select">
+                                <option value="">All</option>
+                                <option value="yes" {% if active_filter == 'yes' %}selected{% endif %}>Active</option>
+                                <option value="no" {% if active_filter == 'no' %}selected{% endif %}>Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="search" name="q" value="{{ query }}" placeholder="Search accounts...">
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-12">
+                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+                        {% if era_filter or platform_filter or active_filter or query %}
+                            <a href="{% url 'catalog:social_media' %}" class="btn btn-outline-secondary">Clear Filters</a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Social Media Accounts Grid -->
+        <div class="row">
+            {% for item in page_obj %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <div style="height: 120px; overflow: hidden; position: relative;">
+                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center;">
+                                <span class="text-white" style="font-size: 2rem;">{{ item.platform }}</span>
+                            </div>
+                            {% if item.thumbnail %}
+                                <img src="{{ item.thumbnail }}" class="card-img-top" alt="{{ item.platform }}" style="width: 100%; object-fit: cover; opacity: 0.5;">
+                            {% else %}
+                                <div class="bg-secondary" style="height: 100%;"></div>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ item.username }}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">{{ item.platform }}</h6>
+                            <p class="card-text">{{ item.notes|truncatechars:100 }}</p>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-primary">{{ item.era }}</span>
+                                <span class="badge {% if item.still_used %}bg-success{% else %}bg-secondary{% endif %}">
+                                    {% if item.still_used %}Active{% else %}Inactive{% endif %}
+                                </span>
+                            </div>
+                            <p class="small text-muted mb-0">Last Post: {{ item.last_post|default:"Unknown" }}</p>
+                        </div>
+                        <div class="card-footer text-center">
+                            <a href="#" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#socialMediaModal{{ item.id }}">Details</a>
+                            {% if item.link and item.link != 'N/A' and item.link != 'Deleted' %}
+                                <a href="{{ item.link }}" class="btn btn-sm btn-outline-secondary" target="_blank">Visit</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Social Media Account Modal for Details -->
+                <div class="modal fade" id="socialMediaModal{{ item.id }}" tabindex="-1" aria-labelledby="socialMediaModalLabel{{ item.id }}" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="socialMediaModalLabel{{ item.id }}">{{ item.username }} ({{ item.platform }})</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div style="height: 200px; overflow: hidden; position: relative;">
+                                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center;">
+                                                <span class="text-white" style="font-size: 2rem;">{{ item.platform }}</span>
+                                            </div>
+                                            {% if item.thumbnail %}
+                                                <img src="{{ item.thumbnail }}" class="img-fluid" alt="{{ item.platform }}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
+                                            {% else %}
+                                                <div class="bg-secondary" style="height: 100%;"></div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <h5>Account Details</h5>
+                                        <p><strong>Username:</strong> {{ item.username }}</p>
+                                        <p><strong>Platform:</strong> {{ item.platform }}</p>
+                                        <p><strong>Era:</strong> {{ item.era }}</p>
+                                        <p><strong>Last Post:</strong> {{ item.last_post|default:"Unknown" }}</p>
+                                        <p><strong>Status:</strong> {% if item.still_used %}Active{% else %}Inactive{% endif %}</p>
+                                        
+                                        {% if item.notes %}
+                                            <h5 class="mt-3">Notes</h5>
+                                            <p>{{ item.notes }}</p>
+                                        {% endif %}
+                                        
+                                        <h5 class="mt-3">Link</h5>
+                                        {% if item.link and item.link != 'N/A' and item.link != 'Deleted' %}
+                                            <p><a href="{{ item.link }}" target="_blank">{{ item.link }}</a></p>
+                                        {% else %}
+                                            <p>{{ item.link|default:"No link available" }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        No social media accounts found. Try changing your filters.
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if era_filter %}&era={{ era_filter }}{% endif %}{% if platform_filter %}&platform={{ platform_filter }}{% endif %}{% if active_filter %}&active={{ active_filter }}{% endif %}{% if query %}&q={{ query }}{% endif %}" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if platform_filter %}&platform={{ platform_filter }}{% endif %}{% if active_filter %}&active={{ active_filter }}{% endif %}{% if query %}&q={{ query }}{% endif %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&laquo;&laquo;</span>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&laquo;</span>
+                    </li>
+                {% endif %}
+                
+                {% for i in page_obj.paginator.page_range %}
+                    {% if page_obj.number == i %}
+                        <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                    {% elif i > page_obj.number|add:"-3" and i < page_obj.number|add:"3" %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ i }}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if platform_filter %}&platform={{ platform_filter }}{% endif %}{% if active_filter %}&active={{ active_filter }}{% endif %}{% if query %}&q={{ query }}{% endif %}">{{ i }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if platform_filter %}&platform={{ platform_filter }}{% endif %}{% if active_filter %}&active={{ active_filter }}{% endif %}{% if query %}&q={{ query }}{% endif %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if platform_filter %}&platform={{ platform_filter }}{% endif %}{% if active_filter %}&active={{ active_filter }}{% endif %}{% if query %}&q={{ query }}{% endif %}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&raquo;</span>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&raquo;&raquo;</span>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+{% endblock %}

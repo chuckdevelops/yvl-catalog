@@ -1,0 +1,228 @@
+{% extends 'catalog/base.html' %}
+{% load catalog_filters %}
+
+{% block title %}Playboi Carti Fit Pics{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-12">
+        <h1 class="mb-4">Playboi Carti Fit Pics</h1>
+        
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Filters</h3>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{% url 'catalog:fit_pics' %}" class="row">
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="era-filter" class="form-label">Era</label>
+                            <select name="era" id="era-filter" class="form-select">
+                                <option value="">All Eras</option>
+                                {% for era in eras %}
+                                    <option value="{{ era }}" {% if era == era_filter %}selected{% endif %}>
+                                        {{ era }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="type-filter" class="form-label">Type</label>
+                            <select name="type" id="type-filter" class="form-select">
+                                <option value="">All Types</option>
+                                {% for type in pic_types %}
+                                    <option value="{{ type }}" {% if type == type_filter %}selected{% endif %}>
+                                        {{ type }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="quality-filter" class="form-label">Quality</label>
+                            <select name="quality" id="quality-filter" class="form-select">
+                                <option value="">All Qualities</option>
+                                {% for quality in qualities %}
+                                    <option value="{{ quality }}" {% if quality == quality_filter %}selected{% endif %}>
+                                        {{ quality }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="search" name="q" value="{{ query }}" placeholder="Search fit pics...">
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-12">
+                        <button type="submit" class="btn btn-primary">Apply Filters</button>
+                        {% if era_filter or type_filter or quality_filter or query %}
+                            <a href="{% url 'catalog:fit_pics' %}" class="btn btn-outline-secondary">Clear Filters</a>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Fit Pics Grid -->
+        <div class="row">
+            {% for item in page_obj %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        {% if item.thumbnail %}
+                            <div style="height: 300px; overflow: hidden;">
+                                <img src="{{ item.thumbnail }}" class="card-img-top" alt="{{ item.caption }}" style="width: 100%; object-fit: cover;">
+                            </div>
+                        {% else %}
+                            <div class="text-center p-3 bg-light" style="height: 300px;">
+                                <i class="fas fa-tshirt fa-5x text-muted d-flex justify-content-center align-items-center h-100"></i>
+                            </div>
+                        {% endif %}
+                        <div class="card-body">
+                            <h5 class="card-title">{{ item.caption|default:"Fit Pic" }}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">{{ item.release_date }}</h6>
+                            {% if item.photographer %}
+                                <p class="card-text">📸: {{ item.photographer }}</p>
+                            {% endif %}
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-primary">{{ item.pic_type }}</span>
+                                <span class="badge bg-info">{{ item.quality }}</span>
+                            </div>
+                            <p class="small text-muted mb-2">Era: {{ item.era }}</p>
+                        </div>
+                        <div class="card-footer text-center">
+                            <a href="#" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#fitPicModal{{ item.id }}">Details</a>
+                            {% if item.source_links %}
+                                <a href="{{ item.source_links.split|first }}" class="btn btn-sm btn-outline-secondary" target="_blank">View Source</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Fit Pic Modal for Details -->
+                <div class="modal fade" id="fitPicModal{{ item.id }}" tabindex="-1" aria-labelledby="fitPicModalLabel{{ item.id }}" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="fitPicModalLabel{{ item.id }}">{{ item.caption|default:"Fit Pic" }} ({{ item.release_date }})</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        {% if item.thumbnail %}
+                                            <img src="{{ item.thumbnail }}" class="img-fluid mb-3" alt="{{ item.caption }}">
+                                        {% else %}
+                                            <div class="text-center p-3 mb-3">
+                                                <i class="fas fa-tshirt fa-5x text-muted"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h5>Details</h5>
+                                        <p><strong>Caption:</strong> {{ item.caption|default:"N/A" }}</p>
+                                        <p><strong>Era:</strong> {{ item.era }}</p>
+                                        <p><strong>Date:</strong> {{ item.release_date }}</p>
+                                        <p><strong>Type:</strong> {{ item.pic_type }}</p>
+                                        <p><strong>Portion:</strong> {{ item.portion }}</p>
+                                        <p><strong>Quality:</strong> {{ item.quality }}</p>
+                                        <p><strong>Photographer:</strong> {{ item.photographer|default:"Unknown" }}</p>
+                                        
+                                        {% if item.notes %}
+                                            <h5 class="mt-3">Notes</h5>
+                                            <p>{{ item.notes }}</p>
+                                        {% endif %}
+                                        
+                                        <h5 class="mt-3">Links</h5>
+                                        {% if item.source_links %}
+                                            {% for link in item.source_links.split %}
+                                                <p><a href="{{ link }}" target="_blank">{{ link }}</a></p>
+                                            {% endfor %}
+                                        {% else %}
+                                            <p>No links available</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        No fit pics found. Try changing your filters.
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if era_filter %}&era={{ era_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if query %}&q={{ query }}{% endif %}" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if query %}&q={{ query }}{% endif %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&laquo;&laquo;</span>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&laquo;</span>
+                    </li>
+                {% endif %}
+                
+                {% for i in page_obj.paginator.page_range %}
+                    {% if page_obj.number == i %}
+                        <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                    {% elif i > page_obj.number|add:"-3" and i < page_obj.number|add:"3" %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ i }}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if query %}&q={{ query }}{% endif %}">{{ i }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if query %}&q={{ query }}{% endif %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if query %}&q={{ query }}{% endif %}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&raquo;</span>
+                    </li>
+                    <li class="page-item disabled">
+                        <span class="page-link" aria-hidden="true">&raquo;&raquo;</span>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+</div>
+{% endblock %}

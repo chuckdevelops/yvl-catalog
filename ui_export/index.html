@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Carti Catalog UI Export</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.5; margin: 0; padding: 20px; }
+        h1 { margin-bottom: 20px; }
+        .files { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .file-card { border: 1px solid #ddd; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        h3 { margin-top: 0; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow: auto; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>Carti Catalog UI Export</h1>
+    <p>This export contains the HTML templates, CSS, and JavaScript files for the Carti Catalog project.</p>
+    
+    <h2>Templates</h2>
+    <div class="files">
+        <div class="file-card">
+            <h3>base.html</h3>
+            <p>The base template that all other templates extend. Contains the header, footer, and common scripts.</p>
+            <a href="templates/base.html" target="_blank">View Template</a>
+        </div>
+        <div class="file-card">
+            <h3>index.html</h3>
+            <p>The homepage template with jumbotron, recent songs, and sheet tab overview.</p>
+            <a href="templates/index.html" target="_blank">View Template</a>
+        </div>
+        <div class="file-card">
+            <h3>song_detail.html</h3>
+            <p>The song detail page with metadata, audio player, and related songs.</p>
+            <a href="templates/song_detail.html" target="_blank">View Template</a>
+        </div>
+    </div>
+    
+    <h2>CSS Files</h2>
+    <div class="files">
+        <div class="file-card">
+            <h3>style.css</h3>
+            <p>The main stylesheet for the project.</p>
+            <a href="css/style.css" target="_blank">View CSS</a>
+        </div>
+    </div>
+    
+    <h2>JavaScript Files</h2>
+    <div class="files">
+        <div class="file-card">
+            <h3>album-interaction.js</h3>
+            <p>JavaScript for album interaction features.</p>
+            <a href="js/album-interaction.js" target="_blank">View JS</a>
+        </div>
+        <div class="file-card">
+            <h3>audio-manager.js</h3>
+            <p>JavaScript for audio player functionality.</p>
+            <a href="js/audio-manager.js" target="_blank">View JS</a>
+        </div>
+        <div class="file-card">
+            <h3>audio-url-fixer.js</h3>
+            <p>JavaScript for fixing audio URLs.</p>
+            <a href="js/audio-url-fixer.js" target="_blank">View JS</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Coming Soon</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: black;
+            overflow: hidden;
+        }
+        
+        .coming-soon-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        .coming-soon-text {
+            font-family: 'Oswald', sans-serif;
+            font-size: 5rem;
+            font-weight: 600;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.5rem;
+            text-align: center;
+        }
+        
+        .back-link {
+            position: fixed;
+            bottom: 20px;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .back-link a {
+            color: #666;
+            text-decoration: none;
+            font-family: 'Oswald', sans-serif;
+            font-size: 1rem;
+            letter-spacing: 0.1rem;
+            transition: color 0.3s ease;
+        }
+        
+        .back-link a:hover {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="coming-soon-container">
+        <h1 class="coming-soon-text">Coming Soon</h1>
+    </div>
+    
+    <div class="back-link">
+        <a href="{% url 'catalog:index' %}">← BACK TO CATALOG</a>
+    </div>
+    
+    {% load static %}
+</body>
+</html>

@@ -194,30 +194,224 @@
         <!-- Pagination -->
         {% if page_obj.paginator.num_pages > 1 %}
             <nav aria-label="Page navigation" class="mt-4">
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if sheet_tab_filter %}&sheet_tab={{ sheet_tab_filter }}{% endif %}{% if producer_filter %}&producer={{ producer_filter }}{% endif %}">First</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if sheet_tab_filter %}&sheet_tab={{ sheet_tab_filter }}{% endif %}{% if producer_filter %}&producer={{ producer_filter }}{% endif %}">Previous</a>
-                        </li>
-                    {% endif %}
+                <div class="d-flex flex-column flex-md-row align-items-center justify-content-center gap-3">
+                    <ul class="pagination mb-2 mb-md-0">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if sheet_tab_filter %}&sheet_tab={{ sheet_tab_filter }}{% endif %}{% if producer_filter %}&producer={{ producer_filter }}{% endif %}">«</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if sheet_tab_filter %}&sheet_tab={{ sheet_tab_filter }}{% endif %}{% if producer_filter %}&producer={{ producer_filter }}{% endif %}">‹</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">«</span>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link">‹</span>
+                            </li>
+                        {% endif %}
 
-                    <li class="page-item disabled">
-                        <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-                    </li>
+                        <li class="page-item page-input-item">
+                            <span class="page-link">
+                                <span class="page-number-wrapper">
+                                    <input 
+                                        type="number" 
+                                        id="page-number-input" 
+                                        class="page-number-input" 
+                                        value="{{ page_obj.number }}" 
+                                        min="1" 
+                                        max="{{ page_obj.paginator.num_pages }}"
+                                        aria-label="Page number">
+                                </span>
+                                <span class="page-separator">/</span>
+                                <span class="page-total-wrapper">
+                                    <span class="page-total">{{ page_obj.paginator.num_pages }}</span>
+                                </span>
+                            </span>
+                        </li>
 
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if sheet_tab_filter %}&sheet_tab={{ sheet_tab_filter }}{% endif %}{% if producer_filter %}&producer={{ producer_filter }}{% endif %}">Next</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if sheet_tab_filter %}&sheet_tab={{ sheet_tab_filter }}{% endif %}{% if producer_filter %}&producer={{ producer_filter }}{% endif %}">Last</a>
-                        </li>
-                    {% endif %}
-                </ul>
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if sheet_tab_filter %}&sheet_tab={{ sheet_tab_filter }}{% endif %}{% if producer_filter %}&producer={{ producer_filter }}{% endif %}">›</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if sheet_tab_filter %}&sheet_tab={{ sheet_tab_filter }}{% endif %}{% if producer_filter %}&producer={{ producer_filter }}{% endif %}">»</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">›</span>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link">»</span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </div>
             </nav>
+            
+            <!-- CSS for page number input -->
+            <style>
+                /* Ensure all page links have consistent height */
+                .pagination .page-link {
+                    height: 38px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 0 0.75rem;
+                    line-height: 1.5;
+                    font-size: 0.875rem;
+                }
+                
+                /* Style for the page input item */
+                .page-input-item .page-link {
+                    background-color: #f8f9fa;
+                    color: #212529;
+                    border-color: #dee2e6;
+                    width: 68px;
+                    text-align: center;
+                    padding: 0 4px;
+                }
+                
+                /* Style for the input field */
+                .page-number-input {
+                    width: 1.6rem;
+                    border: none;
+                    text-align: center;
+                    margin: 0;
+                    padding: 0;
+                    font-weight: 400;
+                    color: #212529;
+                    background-color: transparent;
+                    font-size: 0.875rem;
+                    line-height: 1.5;
+                }
+                
+                /* Number input and page total alignment */
+                .page-input-item .page-link {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0;
+                    padding-top: 0;
+                    padding-bottom: 0;
+                }
+                
+                /* Style for the separator */
+                .page-separator {
+                    margin: 0;
+                    color: #6c757d;
+                }
+                
+                /* Style for page number wrappers */
+                .page-number-wrapper, 
+                .page-total-wrapper {
+                    display: inline-block;
+                    width: 1.8rem;
+                    text-align: center;
+                }
+                
+                /* Style for total pages */
+                .page-total {
+                    font-size: 0.875rem;
+                    text-align: center;
+                }
+                
+                /* Focus state */
+                .page-number-input:focus {
+                    outline: none;
+                    box-shadow: none;
+                    background-color: rgba(13, 110, 253, 0.1);
+                    border-radius: 2px;
+                }
+                
+                /* Hide the number input spin buttons */
+                .page-number-input::-webkit-outer-spin-button,
+                .page-number-input::-webkit-inner-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                }
+                
+                /* Firefox */
+                .page-number-input[type=number] {
+                    -moz-appearance: textfield;
+                }
+                
+                /* Show a subtle highlight on hover */
+                .page-number-input:hover {
+                    background-color: rgba(13, 110, 253, 0.1);
+                    border-radius: 2px;
+                }
+            </style>
+            
+            <!-- JavaScript for page number navigation -->
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const pageInput = document.getElementById('page-number-input');
+                    
+                    // Function to handle navigation
+                    function goToPage() {
+                        const pageNumber = parseInt(pageInput.value);
+                        
+                        // Validate input
+                        if (isNaN(pageNumber) || pageNumber < 1 || pageNumber > {{ page_obj.paginator.num_pages }}) {
+                            // Show error with Bootstrap alert
+                            const alertContainer = document.createElement('div');
+                            alertContainer.className = 'alert alert-danger alert-dismissible fade show mt-2';
+                            alertContainer.setAttribute('role', 'alert');
+                            alertContainer.innerHTML = `Please enter a valid page number between 1 and {{ page_obj.paginator.num_pages }}.
+                                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
+                            
+                            // Insert alert after pagination
+                            const pagination = document.querySelector('nav[aria-label="Page navigation"]');
+                            pagination.parentNode.insertBefore(alertContainer, pagination.nextSibling);
+                            
+                            // Reset to current page
+                            pageInput.value = {{ page_obj.number }};
+                            return;
+                        }
+                        
+                        // Build URL with current filters
+                        let url = `?page=${pageNumber}{% if query %}&q={{ query }}{% endif %}{% if era_filter %}&era={{ era_filter }}{% endif %}{% if quality_filter %}&quality={{ quality_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if sheet_tab_filter %}&sheet_tab={{ sheet_tab_filter }}{% endif %}{% if producer_filter %}&producer={{ producer_filter }}{% endif %}`;
+                        
+                        // Navigate to the URL
+                        window.location.href = url;
+                    }
+                    
+                    // Handle Enter key press
+                    pageInput.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            goToPage();
+                        }
+                    });
+                    
+                    // Handle focus to select all text
+                    pageInput.addEventListener('focus', function() {
+                        this.select();
+                    });
+                    
+                    // Update input when navigating with buttons
+                    const paginationLinks = document.querySelectorAll('.pagination .page-link');
+                    paginationLinks.forEach(link => {
+                        if (link.href && link.href.includes('page=')) {
+                            // Get the page number from the URL
+                            const urlParams = new URLSearchParams(new URL(link.href).search);
+                            const pageParam = urlParams.get('page');
+                            
+                            // Store the page number as a data attribute
+                            link.setAttribute('data-page', pageParam);
+                            
+                            // Add click handler to update the input
+                            link.addEventListener('click', function(e) {
+                                // Don't interrupt the navigation, just update the display
+                                // This is mostly for visual feedback while the page loads
+                                pageInput.value = this.getAttribute('data-page');
+                            });
+                        }
+                    });
+                });
+            </script>
         {% endif %}
     </div>
 </div>

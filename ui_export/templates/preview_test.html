@@ -1,0 +1,80 @@
+{% extends 'catalog/base.html' %}
+{% load catalog_filters %}
+
+{% block title %}Preview Test Page{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Preview Test Page</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h4 mb-0">Media Configuration</h2>
+        </div>
+        <div class="card-body">
+            <p><strong>Media Root:</strong> {{ media_path }}</p>
+            <p><strong>Media URL:</strong> {{ media_url }}</p>
+            <p><strong>Number of Songs with Previews:</strong> {{ songs|length }}</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h2 class="h4 mb-0">Songs with Previews</h2>
+                </div>
+                <div class="card-body">
+                    {% for song in songs %}
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h3 class="h5 mb-0">{{ song.name }} (ID: {{ song.id }})</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5>File Diagnostics</h5>
+                                    <p><strong>Preview URL in DB:</strong> {{ song.original_url }}</p>
+                                    <p><strong>Extracted filename:</strong> {{ song.filename }}</p>
+                                    <p><strong>File exists:</strong> <span class="badge {% if song.file_exists %}bg-success{% else %}bg-danger{% endif %}">{{ song.file_exists }}</span></p>
+                                    {% if song.file_exists %}
+                                        <p><strong>File size:</strong> {{ song.file_size|filesizeformat }}</p>
+                                        <p><strong>File readable:</strong> <span class="badge {% if song.file_readable %}bg-success{% else %}bg-danger{% endif %}">{{ song.file_readable }}</span></p>
+                                        <p><strong>File permissions:</strong> {{ song.file_permissions }}</p>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <h5>File Path</h5>
+                                    <p><strong>Direct URL:</strong> {{ song.audio_url }}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-light p-3 mb-3 mt-3">
+                                <h4 class="h6">Audio Player Tests:</h4>
+                                
+                                <p class="mb-2">Simple Audio Player</p>
+                                <audio controls class="w-100 mb-2">
+                                    <source src="{{ song.audio_url }}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
+                            
+                            <div class="mt-2">
+                                <a href="{{ song.audio_url }}" class="btn btn-sm btn-outline-primary" download>
+                                    Download Preview
+                                </a>
+                                <a href="{% url 'catalog:song_detail' song_id=song.id %}" class="btn btn-sm btn-info">
+                                    View Song Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p>No songs with previews found.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
