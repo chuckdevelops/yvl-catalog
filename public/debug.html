@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React-Django Integration Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #333; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow: auto; }
+        .error { color: red; }
+        .success { color: green; }
+        button { padding: 8px 12px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>React-Django Integration Debug</h1>
+    
+    <div>
+        <h2>1. Vite Server Test</h2>
+        <button onclick="testViteServer()">Test Vite Server</button>
+        <pre id="viteResult">Not tested yet</pre>
+    </div>
+    
+    <div>
+        <h2>2. Django API Test</h2>
+        <button onclick="testDjangoAPI()">Test Django API</button>
+        <pre id="djangoResult">Not tested yet</pre>
+    </div>
+    
+    <div>
+        <h2>3. CORS Test</h2>
+        <button onclick="testCORS()">Test CORS Configuration</button>
+        <pre id="corsResult">Not tested yet</pre>
+    </div>
+
+    <script>
+        // Test if Vite server is running
+        async function testViteServer() {
+            const resultEl = document.getElementById('viteResult');
+            resultEl.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch('/');
+                resultEl.textContent = `Vite server is running: Status ${response.status}`;
+                resultEl.className = 'success';
+            } catch (error) {
+                resultEl.textContent = `Error: ${error.message}`;
+                resultEl.className = 'error';
+            }
+        }
+        
+        // Test if Django API is accessible
+        async function testDjangoAPI() {
+            const resultEl = document.getElementById('djangoResult');
+            resultEl.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch('/api/home/');
+                if (response.ok) {
+                    const data = await response.json();
+                    resultEl.textContent = `Django API is accessible: ${JSON.stringify(data, null, 2).substring(0, 300)}...`;
+                    resultEl.className = 'success';
+                } else {
+                    resultEl.textContent = `Django API returned error: Status ${response.status}`;
+                    resultEl.className = 'error';
+                }
+            } catch (error) {
+                resultEl.textContent = `Error: ${error.message}`;
+                resultEl.className = 'error';
+            }
+        }
+        
+        // Test CORS configuration
+        async function testCORS() {
+            const resultEl = document.getElementById('corsResult');
+            resultEl.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch('http://localhost:8001/api/home/', {
+                    credentials: 'include',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (response.ok) {
+                    resultEl.textContent = `CORS is properly configured: Status ${response.status}`;
+                    resultEl.className = 'success';
+                } else {
+                    resultEl.textContent = `CORS test failed: Status ${response.status}`;
+                    resultEl.className = 'error';
+                }
+            } catch (error) {
+                resultEl.textContent = `CORS error: ${error.message} - This likely means CORS is not configured correctly`;
+                resultEl.className = 'error';
+            }
+        }
+    </script>
+</body>
+</html>

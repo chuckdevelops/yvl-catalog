@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carti Catalog Standalone</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #111827;
+      color: white;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    header {
+      background-color: #1f2937;
+      padding: 1rem 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+    
+    .logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .nav-links {
+      display: flex;
+      gap: 1.5rem;
+    }
+    
+    .nav-links a {
+      color: #9ca3af;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    
+    .nav-links a:hover {
+      color: white;
+    }
+    
+    .card {
+      background-color: #1f2937;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .stat-card {
+      background-color: #374151;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+    }
+    
+    .stat-icon {
+      font-size: 2rem;
+      margin-right: 1rem;
+    }
+    
+    .stat-info h3 {
+      margin: 0;
+      color: #9ca3af;
+      font-size: 0.875rem;
+    }
+    
+    .stat-info p {
+      margin: 0.25rem 0 0;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .songs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .song-card {
+      background-color: #374151;
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+    
+    .song-info {
+      padding: 1rem;
+    }
+    
+    .song-title {
+      margin: 0;
+      font-size: 1rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .song-details {
+      margin: 0.5rem 0 0;
+      font-size: 0.875rem;
+      color: #9ca3af;
+    }
+    
+    .badge {
+      display: inline-block;
+      background-color: #4b5563;
+      color: white;
+      border-radius: 9999px;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+      margin-right: 0.25rem;
+    }
+    
+    .badge.era {
+      background-color: #1e40af;
+    }
+    
+    .badge.quality {
+      background-color: #065f46;
+    }
+    
+    .audio-controls {
+      padding: 0.75rem;
+      background-color: #4b5563;
+    }
+    
+    .view-button {
+      display: block;
+      text-align: center;
+      background-color: #1f2937;
+      color: #60a5fa;
+      padding: 0.5rem;
+      text-decoration: none;
+    }
+    
+    .view-button:hover {
+      background-color: #374151;
+    }
+    
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    .view-all {
+      color: #60a5fa;
+      text-decoration: none;
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <nav>
+      <div class="logo">Carti Catalog</div>
+      <div class="nav-links">
+        <a href="#home">Home</a>
+        <a href="#library">Song Library</a>
+      </div>
+    </nav>
+  </header>
+  
+  <div class="container">
+    <h1>Carti Catalog Dashboard</h1>
+    
+    <div class="card">
+      <h2>Statistics</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">🎵</div>
+          <div class="stat-info">
+            <h3>Total Songs</h3>
+            <p>432</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📅</div>
+          <div class="stat-info">
+            <h3>Distinct Eras</h3>
+            <p>8</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📁</div>
+          <div class="stat-info">
+            <h3>Collections</h3>
+            <p>6</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="card">
+      <div class="section-header">
+        <h2>Recent Songs</h2>
+        <a href="#library" class="view-all">View All →</a>
+      </div>
+      <div class="songs-grid">
+        <div class="song-card">
+          <div class="song-info">
+            <h3 class="song-title">Example Song 1</h3>
+            <div class="song-tags">
+              <span class="badge era">V2</span>
+              <span class="badge quality">CDQ</span>
+            </div>
+            <p class="song-details">Prod. Metro Boomin • Feat. Lil Uzi Vert</p>
+          </div>
+          <div class="audio-controls">
+            <audio controls style="width: 100%; height: 30px;">
+              <source src="/sample-audio.mp3" type="audio/mpeg">
+              Your browser does not support audio playback.
+            </audio>
+          </div>
+          <a href="#details" class="view-button">View Details</a>
+        </div>
+        
+        <div class="song-card">
+          <div class="song-info">
+            <h3 class="song-title">Example Song 2</h3>
+            <div class="song-tags">
+              <span class="badge era">WLR</span>
+              <span class="badge quality">HQ</span>
+            </div>
+            <p class="song-details">Prod. Pierre Bourne</p>
+          </div>
+          <div class="audio-controls">
+            <audio controls style="width: 100%; height: 30px;">
+              <source src="/sample-audio.mp3" type="audio/mpeg">
+              Your browser does not support audio playback.
+            </audio>
+          </div>
+          <a href="#details" class="view-button">View Details</a>
+        </div>
+        
+        <div class="song-card">
+          <div class="song-info">
+            <h3 class="song-title">Example Song 3</h3>
+            <div class="song-tags">
+              <span class="badge era">MUSIC</span>
+              <span class="badge quality">LQ</span>
+            </div>
+            <p class="song-details">Prod. Wheezy • Feat. Lil Uzi Vert</p>
+          </div>
+          <div class="audio-controls">
+            <audio controls style="width: 100%; height: 30px;">
+              <source src="/sample-audio.mp3" type="audio/mpeg">
+              Your browser does not support audio playback.
+            </audio>
+          </div>
+          <a href="#details" class="view-button">View Details</a>
+        </div>
+        
+        <div class="song-card">
+          <div class="song-info">
+            <h3 class="song-title">Example Song 4</h3>
+            <div class="song-tags">
+              <span class="badge era">Post-WLR</span>
+              <span class="badge quality">CDQ</span>
+            </div>
+            <p class="song-details">Prod. Metro Boomin</p>
+          </div>
+          <div class="audio-controls">
+            <audio controls style="width: 100%; height: 30px;">
+              <source src="/sample-audio.mp3" type="audio/mpeg">
+              Your browser does not support audio playback.
+            </audio>
+          </div>
+          <a href="#details" class="view-button">View Details</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

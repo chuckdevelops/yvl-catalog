@@ -1,0 +1,36 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carti Catalog - React UI</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'catalog/img/high_res_favicon.ico' %}">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- React CSS bundle -->
+    <link rel="stylesheet" href="{% static 'catalog/js/dist/assets/index.css' %}?v={{ timestamp }}">
+    <script>
+        // Global variables available to React app
+        window.DJANGO_MEDIA_URL = "{{ MEDIA_URL }}";
+        window.DJANGO_STATIC_URL = "{{ STATIC_URL }}";
+        window.DJANGO_API_URL = "/api/";
+        window.DJANGO_CSRF_TOKEN = "{{ csrf_token }}";
+    </script>
+</head>
+<body class="bg-black text-white">
+    <div id="root">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="text-center">
+                <div class="loading-spinner mb-4"></div>
+                <p>Loading Carti Catalog...</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- React bundle -->
+    <script src="{% static 'catalog/js/dist/bundle.js' %}?v={{ timestamp }}"></script>
+</body>
+</html>

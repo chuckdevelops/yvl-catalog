@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}Carti Catalog{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'catalog/css/style.css' %}?v=2.0">
+    <link rel="icon" type="image/x-icon" href="{% static 'catalog/img/high_res_favicon.ico' %}">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        /* Voting button styles */
+        #voting-section .like-count, 
+        #voting-section .dislike-count {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-top: 5px;
+            color: #333;
+        }
+        
+        #voting-section button {
+            font-size: 1.1rem;
+            padding: 8px;
+            border-color: #ddd;
+        }
+        
+        #voting-section button.active {
+            font-weight: bold;
+            background-color: #333;
+            color: white;
+            border-color: #333;
+        }
+        
+        #voting-section .card {
+            border-color: #eee;
+        }
+        
+        /* Peace sign styling */
+        .peace-sign-nav {
+            margin-left: 1px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .peace-sign-nav a {
+            padding-left: 0;
+            padding-right: 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .peace-sign-nav img {
+            transform: scale(1);
+            transition: transform 0.2s ease;
+        }
+        
+        .peace-sign-nav img:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar - Minimalist -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'catalog:index' %}">Carti Catalog</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'catalog:index' %}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'catalog:song_list' %}">Music</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'catalog:media' %}">Media</a>
+                    </li>
+                    <li class="nav-item peace-sign-nav">
+                        <a class="nav-link" href="{% url 'catalog:coming_soon' %}"><img src="{% static 'catalog/img/peace-sign.png' %}" alt="Peace Sign" height="24"></a>
+                    </li>
+                </ul>
+                <form class="d-flex" action="{% url 'catalog:song_list' %}" method="get">
+                    <input class="form-control me-2" type="search" name="q" placeholder="Search">
+                    <button class="btn btn-outline-secondary btn-sm" type="submit">Search</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content - Fills available space -->
+    <div class="container mt-4">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer - Minimalist -->
+    <footer class="text-center p-3 mt-5">
+        <div class="container">
+            <p class="mb-0">Carti Catalog &copy; {% now 'Y' %}</p>
+            
+            <!-- Simplified album artwork section -->
+            <span class="album-row">
+                <img class="album-icon spin" src="https://cache.umusic.com/_sites/playboicarti.com/images/products/CD13-375x375-1.png" alt="Whole Lotta Red" width="20" height="20">
+                <img class="album-icon" src="https://cache.umusic.com/_sites/playboicarti.com/images/products/CD10-375x375-1.png" alt="Die Lit" width="20" height="20">
+                <img class="album-icon" src="https://cache.umusic.com/_sites/playboicarti.com/images/products/CD11-375x375-1.png" alt="Self Titled" width="20" height="20">
+            </span>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% load static %}
+    <script src="{% static 'catalog/js/album-interaction.js' %}?v=1.3"></script>
+    <script src="{% static 'catalog/js/audio-manager.js' %}?v=1.1"></script>
+    <script src="{% static 'catalog/js/audio-url-fixer.js' %}?v=1.2"></script>
+    <script>
+        // Force refresh of browser cache
+        if (localStorage.getItem('cache_version') !== '3.2') {
+            localStorage.setItem('cache_version', '3.2');
+            location.reload(true);
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

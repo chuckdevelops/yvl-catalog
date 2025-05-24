@@ -1,0 +1,20 @@
+{% extends 'catalog/base.html' %}
+{% load static %}
+
+{% block title %}All Songs | Playboi Carti Catalog (React){% endblock %}
+
+{% block content %}
+<div id="react-song-list-container" 
+     data-songs="{{ songs_json|escapejs }}"
+     data-filters="{{ filters_json|escapejs }}">
+    <!-- React will render here -->
+    <div class="text-center py-5">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2">Loading React components...</p>
+    </div>
+</div>
+
+<!-- React bundle.js is now loaded from base.html -->
+{% endblock %}

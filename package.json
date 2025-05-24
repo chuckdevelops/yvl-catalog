@@ -2,5 +2,8 @@
   "dependencies": {
     "claude": "^0.0.6",
     "code": "^5.2.4"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
   }
 }
