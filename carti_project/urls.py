@@ -77,6 +77,7 @@ def serve_media_audio(request, filename):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/', include('catalog.api_urls')),  # Add API endpoints
     path('', include('catalog.urls')),
     
     # Use our enhanced handler for all preview files
@@ -102,3 +103,28 @@ urlpatterns += [
          ), 
          name='serve_media'),
 ]
+
+# TODO: Add API URL routing
+# Add this import if not already present:
+# from django.conf import settings
+# from django.conf.urls.static import static
+
+# TODO: Add API URLs to your urlpatterns
+# Add this line to your urlpatterns list:
+# path('api/', include('catalog.api_urls')),
+
+# TODO: Add static file serving for development
+# Add this at the end of the file (after urlpatterns definition):
+# if settings.DEBUG:
+#     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+#     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+# TODO: Add API documentation URLs (optional)
+# path('api-docs/', include('rest_framework.urls')),  # Browsable API
+
+# Example of what your urlpatterns should look like:
+# urlpatterns = [
+#     path('admin/', admin.site.urls),
+#     path('api/', include('catalog.api_urls')),  # New API endpoints
+#     path('', include('catalog.urls')),  # Your existing URLs
+# ]

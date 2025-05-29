@@ -1,0 +1,25 @@
+# Django REST Framework and related packages
+djangorestframework>=3.14.0  # Main REST API framework
+django-cors-headers>=4.0.0   # Handle CORS for React frontend
+django-filter>=23.0          # Advanced filtering for API endpoints
+
+# TODO: Add these if you need them:
+# djangorestframework-simplejwt>=5.0.0  # JWT authentication
+# django-extensions>=3.2.0              # Useful Django extensions
+# drf-spectacular>=0.26.0                # OpenAPI/Swagger documentation
+# django-rest-swagger>=2.2.0            # Alternative API documentation
+# djangorestframework-xml>=2.0.0        # XML rendering support
+# djangorestframework-csv>=3.0.0        # CSV rendering support
+
+# Performance and caching
+# redis>=4.5.0                # For caching and session storage
+# django-redis>=5.2.0         # Django Redis adapter
+# celery>=5.2.0               # Background task processing
+
+# Additional utilities
+# python-dotenv>=1.0.0        # Environment variable management
+# django-debug-toolbar>=4.0.0 # Development debugging
+# whitenoise>=6.4.0           # Static file serving in production
+
+# TODO: Install these packages:
+# pip install -r requirements-api.txt 
